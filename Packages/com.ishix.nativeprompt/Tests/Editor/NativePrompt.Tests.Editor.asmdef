@@ -1,0 +1,13 @@
+{
+  "name": "NativePrompt.Tests.Editor",
+  "rootNamespace": "NativePrompt.Tests",
+  "references": [
+    "NativePrompt"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

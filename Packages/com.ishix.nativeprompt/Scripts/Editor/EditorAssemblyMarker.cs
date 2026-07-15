@@ -1,7 +1,6 @@
 namespace NativePrompt.Editor
 {
-    // Keeps the Editor-only namespace and assembly boundary explicit until the
-    // platform strategy is implemented.
+    // Keeps the Editor-only namespace and assembly boundary explicit.
     internal static class EditorAssemblyMarker
     {
     }

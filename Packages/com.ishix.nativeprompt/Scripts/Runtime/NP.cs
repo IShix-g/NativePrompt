@@ -14,7 +14,9 @@ namespace NativePrompt
         /// <param name="onCompleted">Called once after the alert is closed.</param>
         public static void ShowAlert(AlertOptions options, Action<AlertResult> onCompleted = null)
         {
-            throw CreateNotImplementedException();
+            NativePromptRuntime.ShowAlert(
+                NativePromptOptions.Normalize(options),
+                onCompleted);
         }
 
         /// <summary>
@@ -26,7 +28,9 @@ namespace NativePrompt
             BottomSheetOptions options,
             Action<BottomSheetResult> onCompleted = null)
         {
-            throw CreateNotImplementedException();
+            NativePromptRuntime.ShowBottomSheet(
+                NativePromptOptions.Normalize(options),
+                onCompleted);
         }
 
         /// <summary>
@@ -39,13 +43,9 @@ namespace NativePrompt
             ToastOptions options,
             Action<ToastDismissReason> onDismissed = null)
         {
-            throw CreateNotImplementedException();
-        }
-
-        private static NotImplementedException CreateNotImplementedException()
-        {
-            return new NotImplementedException(
-                "The NativePrompt public API is defined, but its runtime dispatch is not implemented yet.");
+            return NativePromptRuntime.ShowToast(
+                NativePromptOptions.Normalize(options),
+                onDismissed);
         }
     }
 }
