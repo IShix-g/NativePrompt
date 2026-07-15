@@ -9,13 +9,44 @@ namespace NativePrompt
     {
         private const string NativeClassName = "com.ishix.nativeprompt.NativeBottomSheet";
         private const string NativeToastClassName = "com.ishix.nativeprompt.NativeToast";
+        private const string NativeAlertClassName = "com.ishix.nativeprompt.NativeAlert";
         private readonly object _gate = new object();
         private readonly Dictionary<string, BottomSheetCallbackProxy> _bottomSheetCallbacks =
             new Dictionary<string, BottomSheetCallbackProxy>(StringComparer.Ordinal);
         private readonly Dictionary<string, ToastCallbackProxy> _toastCallbacks =
             new Dictionary<string, ToastCallbackProxy>(StringComparer.Ordinal);
+        private readonly Dictionary<string, AlertCallbackProxy> _alertCallbacks =
+            new Dictionary<string, AlertCallbackProxy>(StringComparer.Ordinal);
 
-        public void ShowAlert(string requestId, AlertOptions options) => ThrowNotImplemented();
+        public void ShowAlert(string requestId, AlertOptions options)
+        {
+            var callback = new AlertCallbackProxy(this, requestId);
+            lock (_gate)
+            {
+                _alertCallbacks.Add(requestId, callback);
+            }
+
+            try
+            {
+                using (var nativeClass = new AndroidJavaClass(NativeAlertClassName))
+                {
+                    nativeClass.CallStatic(
+                        "show",
+                        requestId,
+                        options.Title,
+                        options.Content,
+                        options.YesButtonText,
+                        options.NoButtonText,
+                        options.CloseButtonText,
+                        callback);
+                }
+            }
+            catch
+            {
+                RemoveAlertCallback(requestId, callback);
+                throw;
+            }
+        }
 
         public void ShowBottomSheet(string requestId, BottomSheetOptions options)
         {
@@ -92,6 +123,7 @@ namespace NativePrompt
             {
                 _bottomSheetCallbacks.Clear();
                 _toastCallbacks.Clear();
+                _alertCallbacks.Clear();
             }
 
             using (var nativeClass = new AndroidJavaClass(NativeClassName))
@@ -100,6 +132,11 @@ namespace NativePrompt
             }
 
             using (var nativeClass = new AndroidJavaClass(NativeToastClassName))
+            {
+                nativeClass.CallStatic("reset");
+            }
+
+            using (var nativeClass = new AndroidJavaClass(NativeAlertClassName))
             {
                 nativeClass.CallStatic("reset");
             }
@@ -169,6 +206,34 @@ namespace NativePrompt
             }
         }
 
+        private void CompleteAlert(
+            string requestId,
+            int result,
+            AlertCallbackProxy callback)
+        {
+            if (RemoveAlertCallback(requestId, callback))
+            {
+                NativePromptCallbackReceiver.AlertCompleted(
+                    requestId,
+                    (AlertResult)result);
+            }
+        }
+
+        private bool RemoveAlertCallback(string requestId, AlertCallbackProxy callback)
+        {
+            lock (_gate)
+            {
+                if (!_alertCallbacks.TryGetValue(requestId, out AlertCallbackProxy current) ||
+                    !ReferenceEquals(current, callback))
+                {
+                    return false;
+                }
+
+                _alertCallbacks.Remove(requestId);
+                return true;
+            }
+        }
+
         private sealed class BottomSheetCallbackProxy : AndroidJavaProxy
         {
             private readonly AndroidNativePromptStrategy _owner;
@@ -219,6 +284,29 @@ namespace NativePrompt
                 if (requestId == _requestId)
                 {
                     _owner.CompleteToast(requestId, reason, this);
+                }
+            }
+        }
+
+        private sealed class AlertCallbackProxy : AndroidJavaProxy
+        {
+            private readonly AndroidNativePromptStrategy _owner;
+            private readonly string _requestId;
+
+            internal AlertCallbackProxy(
+                AndroidNativePromptStrategy owner,
+                string requestId)
+                : base(NativeAlertClassName + "$Callback")
+            {
+                _owner = owner;
+                _requestId = requestId;
+            }
+
+            public void onCompleted(string requestId, int result)
+            {
+                if (requestId == _requestId)
+                {
+                    _owner.CompleteAlert(requestId, result, this);
                 }
             }
         }

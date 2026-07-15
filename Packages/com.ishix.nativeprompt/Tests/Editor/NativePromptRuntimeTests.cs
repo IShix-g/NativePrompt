@@ -275,6 +275,144 @@ namespace NativePrompt.Tests
         }
 
         [Test]
+        public void Alert_RejectsMissingContent()
+        {
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowAlert(new AlertOptions { Content = null }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowAlert(new AlertOptions { Content = "   " }));
+        }
+
+        [Test]
+        public void Alert_OmitsTitleWhenNotSpecified()
+        {
+            NP.ShowAlert(new AlertOptions { Content = "Content" });
+
+            Assert.That(_strategy.Alerts[0].Options.Title, Is.Null);
+        }
+
+        [Test]
+        public void Alert_ContentOnlyAddsDefaultOrCustomCloseButton()
+        {
+            NP.ShowAlert(new AlertOptions { Content = "Default close" });
+
+            AlertOptions defaultClose = _strategy.Alerts[0].Options;
+            Assert.That(defaultClose.YesButtonText, Is.Null);
+            Assert.That(defaultClose.NoButtonText, Is.Null);
+            Assert.That(defaultClose.CloseButtonText, Is.EqualTo("Close"));
+
+            NativePromptCallbackReceiver.AlertCompleted(
+                _strategy.Alerts[0].RequestId,
+                AlertResult.Closed);
+            NP.ShowAlert(new AlertOptions
+            {
+                Content = "Custom close",
+                CloseButtonText = "Dismiss"
+            });
+
+            Assert.That(
+                _strategy.Alerts[1].Options.CloseButtonText,
+                Is.EqualTo("Dismiss"));
+        }
+
+        [Test]
+        public void Alert_ContentAndYesOnlyPassesAffirmativeButton()
+        {
+            NP.ShowAlert(new AlertOptions
+            {
+                Content = "Continue?",
+                YesButtonText = "Continue"
+            });
+
+            AlertOptions options = _strategy.Alerts[0].Options;
+            Assert.That(options.YesButtonText, Is.EqualTo("Continue"));
+            Assert.That(options.NoButtonText, Is.Null);
+        }
+
+        [Test]
+        public void Alert_ContentAndNoOnlyPassesNegativeButton()
+        {
+            NP.ShowAlert(new AlertOptions
+            {
+                Content = "Stop?",
+                NoButtonText = "Stop"
+            });
+
+            AlertOptions options = _strategy.Alerts[0].Options;
+            Assert.That(options.YesButtonText, Is.Null);
+            Assert.That(options.NoButtonText, Is.EqualTo("Stop"));
+        }
+
+        [Test]
+        public void Alert_AllFieldsPassToStrategy()
+        {
+            NP.ShowAlert(new AlertOptions
+            {
+                Title = "Question",
+                Content = "Continue?",
+                YesButtonText = "Yes",
+                NoButtonText = "No"
+            });
+
+            AlertOptions options = _strategy.Alerts[0].Options;
+            Assert.That(options.Title, Is.EqualTo("Question"));
+            Assert.That(options.Content, Is.EqualTo("Continue?"));
+            Assert.That(options.YesButtonText, Is.EqualTo("Yes"));
+            Assert.That(options.NoButtonText, Is.EqualTo("No"));
+        }
+
+        [Test]
+        public void Alert_WhitespaceButtonTextIsTreatedAsOmitted()
+        {
+            NP.ShowAlert(new AlertOptions
+            {
+                Content = "Content",
+                YesButtonText = "   ",
+                NoButtonText = "\t",
+                CloseButtonText = " Done "
+            });
+
+            AlertOptions options = _strategy.Alerts[0].Options;
+            Assert.That(options.YesButtonText, Is.Null);
+            Assert.That(options.NoButtonText, Is.Null);
+            Assert.That(options.CloseButtonText, Is.EqualTo("Done"));
+        }
+
+        [Test]
+        public void Alert_MapsYesNoAndClosedResultsToCallbacks()
+        {
+            var results = new List<AlertResult>();
+
+            NP.ShowAlert(
+                new AlertOptions { Content = "Yes", YesButtonText = "Yes" },
+                results.Add);
+            NativePromptCallbackReceiver.AlertCompleted(
+                _strategy.Alerts[0].RequestId,
+                AlertResult.Yes);
+
+            NP.ShowAlert(
+                new AlertOptions { Content = "No", NoButtonText = "No" },
+                results.Add);
+            NativePromptCallbackReceiver.AlertCompleted(
+                _strategy.Alerts[1].RequestId,
+                AlertResult.No);
+
+            NP.ShowAlert(
+                new AlertOptions { Content = "Closed" },
+                results.Add);
+            NativePromptCallbackReceiver.AlertCompleted(
+                _strategy.Alerts[2].RequestId,
+                AlertResult.Closed);
+
+            Assert.That(results, Is.EqualTo(new[]
+            {
+                AlertResult.Yes,
+                AlertResult.No,
+                AlertResult.Closed
+            }));
+        }
+
+        [Test]
         public void Alert_ProcessesRequestsInFifoOrder()
         {
             var completed = new List<string>();

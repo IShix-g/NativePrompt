@@ -19,7 +19,34 @@ namespace NativePrompt.Editor
 
         public void ShowAlert(string requestId, AlertOptions options)
         {
-            ThrowNotImplemented();
+            string title = options.Title ?? string.Empty;
+            AlertResult result;
+            if (options.YesButtonText != null && options.NoButtonText != null)
+            {
+                bool selectedYes = EditorUtility.DisplayDialog(
+                    title,
+                    options.Content,
+                    options.YesButtonText,
+                    options.NoButtonText);
+                result = selectedYes ? AlertResult.Yes : AlertResult.No;
+            }
+            else if (options.YesButtonText != null)
+            {
+                EditorUtility.DisplayDialog(title, options.Content, options.YesButtonText);
+                result = AlertResult.Yes;
+            }
+            else if (options.NoButtonText != null)
+            {
+                EditorUtility.DisplayDialog(title, options.Content, options.NoButtonText);
+                result = AlertResult.No;
+            }
+            else
+            {
+                EditorUtility.DisplayDialog(title, options.Content, options.CloseButtonText);
+                result = AlertResult.Closed;
+            }
+
+            NativePromptCallbackReceiver.AlertCompleted(requestId, result);
         }
 
         public void ShowBottomSheet(string requestId, BottomSheetOptions options)

@@ -10,4 +10,6 @@ All notable changes to this package are documented in this file.
 - Public `NP` facade and Alert, Bottom Sheet, and Toast API contracts.
 - Runtime and Editor assembly boundaries for the `NativePrompt` and
   `NativePrompt.Editor` namespaces.
+- Native Alert presentation for iOS, Android, and the Unity Editor, including
+  result callbacks, configurable buttons, and non-cancellable Android dialogs.
 - API and architecture documentation.

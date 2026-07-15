@@ -31,6 +31,9 @@ NP.ShowAlert(
 
 `AlertResult` is `Yes`, `No`, or `Closed`. Alert requests are processed in FIFO
 order. On Android, tapping the backdrop or pressing Back does not dismiss an alert.
+The iOS implementation uses `UIAlertController` with the alert style, Android uses
+the SDK `AlertDialog`, and the Unity Editor uses `EditorUtility.DisplayDialog`.
+Each platform keeps its standard theme, typography, and button placement.
 
 ## Bottom sheet
 
@@ -114,7 +117,7 @@ main thread.
 
 | Feature | iOS | Android | Unity Editor |
 | --- | --- | --- | --- |
-| Alert | UIKit alert | Android SDK `AlertDialog` | Unity native editor dialog |
+| Alert | UIKit `UIAlertController` (alert style) | Android SDK `AlertDialog` (not cancelled by backdrop or Back) | `EditorUtility.DisplayDialog` |
 | Bottom sheet | UIKit action sheet | Android SDK `Dialog` and standard views | Logs options, then returns Cancelled |
 | Toast | UIKit view overlay | Android standard-view overlay | Logs the message while preserving the callback contract |
 
