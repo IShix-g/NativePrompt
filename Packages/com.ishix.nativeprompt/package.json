@@ -1,0 +1,19 @@
+{
+  "name": "com.ishix.nativeprompt",
+  "version": "0.1.0",
+  "displayName": "Native Prompt",
+  "description": "Provides platform-native dialogs and bottom sheets for Unity.",
+  "unity": "6000.0",
+  "author": {
+    "name": "IShix",
+    "url": "https://github.com/IShix-g"
+  },
+  "license": "MIT",
+  "keywords": [
+    "native",
+    "prompt",
+    "dialog",
+    "alert",
+    "bottom-sheet"
+  ]
+}
