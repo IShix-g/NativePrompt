@@ -39,6 +39,17 @@ are under development.
 - [Public API](Documentation~/api.md)
 - [Architecture](Documentation~/architecture.md)
 
+## UI Toolkit sample
+
+Open `Assets/Samples/NativePrompt/NativePromptSample.unity` and enter Play Mode.
+The centered 540 x 960 logical viewport provides buttons for every Alert, Bottom
+Sheet, and Toast configuration, including manual Toast dismissal. The most recent
+callback result is displayed in the sample UI.
+
+Use the sample in the Unity Editor for API-flow checks and on iOS or Android for
+native appearance checks. The accompanying PlayMode tests are located at
+`Assets/Samples/NativePrompt/Tests/PlayMode`.
+
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).

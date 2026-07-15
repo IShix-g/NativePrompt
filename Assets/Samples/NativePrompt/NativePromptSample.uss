@@ -1,0 +1,99 @@
+.screen-root {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(18, 22, 32);
+}
+
+.logical-viewport {
+    width: 540px;
+    height: 960px;
+    padding: 40px 32px;
+    background-color: rgb(245, 247, 252);
+    color: rgb(28, 34, 48);
+}
+
+.header {
+    height: 104px;
+    justify-content: center;
+}
+
+.title {
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: rgb(24, 50, 96);
+}
+
+.subtitle {
+    margin-top: 4px;
+    font-size: 16px;
+    color: rgb(92, 103, 126);
+}
+
+.section {
+    margin-top: 16px;
+}
+
+.section-title {
+    margin-bottom: 8px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(78, 92, 120);
+}
+
+.button-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.action-button {
+    width: 230px;
+    height: 52px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border-width: 0;
+    background-color: rgb(48, 92, 176);
+    color: white;
+    font-size: 16px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.action-button:hover {
+    background-color: rgb(58, 108, 204);
+}
+
+.action-button:active {
+    background-color: rgb(35, 70, 140);
+}
+
+.destructive-button {
+    background-color: rgb(181, 57, 68);
+}
+
+.secondary-button {
+    background-color: rgb(75, 84, 104);
+}
+
+.result-panel {
+    flex-grow: 1;
+    min-height: 112px;
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 10px;
+    background-color: rgb(225, 231, 243);
+}
+
+.result-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(78, 92, 120);
+}
+
+.result-value {
+    margin-top: 10px;
+    font-size: 20px;
+    white-space: normal;
+    color: rgb(24, 50, 96);
+}

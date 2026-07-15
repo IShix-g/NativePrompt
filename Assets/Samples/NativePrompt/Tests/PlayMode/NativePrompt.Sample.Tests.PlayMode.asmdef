@@ -1,0 +1,10 @@
+{
+  "name": "NativePrompt.Sample.Tests.PlayMode",
+  "rootNamespace": "NativePrompt.Samples.Tests",
+  "references": [
+    "NativePrompt.Sample"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "NativePrompt.Sample",
+  "rootNamespace": "NativePrompt.Samples",
+  "references": [
+    "NativePrompt"
+  ]
+}

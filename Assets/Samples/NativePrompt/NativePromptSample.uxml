@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="project://database/Assets/Samples/NativePrompt/NativePromptSample.uss?fileID=7433441132597879392&amp;guid=1fc6912061484d8bb515b603fd9c0388&amp;type=3#NativePromptSample" />
+    <ui:VisualElement name="screen-root" class="screen-root">
+        <ui:VisualElement name="logical-viewport" class="logical-viewport">
+            <ui:VisualElement class="header">
+                <ui:Label text="Native Prompt" class="title" />
+                <ui:Label text="UI Toolkit Sample · 540 × 960" class="subtitle" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="section">
+                <ui:Label text="ALERT" class="section-title" />
+                <ui:VisualElement class="button-grid">
+                    <ui:Button name="alert-content-button" text="Content only" class="action-button" />
+                    <ui:Button name="alert-yes-button" text="Content + Yes" class="action-button" />
+                    <ui:Button name="alert-no-button" text="Content + No" class="action-button" />
+                    <ui:Button name="alert-full-button" text="Title + Yes + No" class="action-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement class="section">
+                <ui:Label text="BOTTOM SHEET" class="section-title" />
+                <ui:VisualElement class="button-grid">
+                    <ui:Button name="sheet-standard-button" text="Standard" class="action-button" />
+                    <ui:Button name="sheet-destructive-button" text="Destructive" class="action-button destructive-button" />
+                    <ui:Button name="sheet-disabled-button" text="Disabled action" class="action-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement class="section">
+                <ui:Label text="TOAST" class="section-title" />
+                <ui:VisualElement class="button-grid">
+                    <ui:Button name="toast-auto-button" text="Auto dismiss" class="action-button" />
+                    <ui:Button name="toast-tap-button" text="Tap to dismiss" class="action-button" />
+                    <ui:Button name="toast-manual-button" text="Show manual" class="action-button" />
+                    <ui:Button name="toast-dismiss-button" text="Dismiss manual" class="action-button secondary-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="result-panel" class="result-panel">
+                <ui:Label text="LATEST RESULT" class="result-title" />
+                <ui:Label name="result-value" text="Ready" class="result-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
