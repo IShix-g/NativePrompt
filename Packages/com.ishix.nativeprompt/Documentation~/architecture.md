@@ -1,8 +1,8 @@
 # NativePrompt architecture
 
 NativePrompt separates its public C# contract, shared request coordination, and
-platform UI implementations. This document is the boundary contract for the
-follow-up runtime and platform implementation work.
+platform UI implementations. This document describes the implemented v0.1
+boundaries and ownership.
 
 ## Assembly and namespace boundaries
 

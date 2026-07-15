@@ -2,9 +2,8 @@
 
 The runtime API is in the `NativePrompt` namespace and the `NativePrompt`
 assembly. NativePrompt v0.1 uses callbacks; it does not expose a Task-based API.
-
-> The API contract is available now. Platform dispatch and native UI
-> implementations are delivered by the runtime and platform implementation work.
+The shared runtime dispatches requests to the implemented iOS, Android, or Unity
+Editor strategy.
 
 ## Alert
 

@@ -12,4 +12,11 @@ All notable changes to this package are documented in this file.
   `NativePrompt.Editor` namespaces.
 - Native Alert presentation for iOS, Android, and the Unity Editor, including
   result callbacks, configurable buttons, and non-cancellable Android dialogs.
-- API and architecture documentation.
+- Native Bottom Sheet presentation for iOS and Android, plus the Editor
+  cancellation behavior.
+- Native Toast presentation for iOS and Android, including timeout, tap, manual
+  dismissal, replacement, and safe-area positioning behavior.
+- Shared FIFO Alert coordination, single-slot Toast replacement, callback-once
+  handling, and main-thread callback dispatch.
+- UI Toolkit sample scene and EditMode/PlayMode automated test coverage.
+- API, architecture, sample, and release-verification documentation.
