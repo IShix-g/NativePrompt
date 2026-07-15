@@ -1,6 +1,6 @@
 # Native Prompt
 
-Native Prompt provides platform-native dialogs and bottom sheets for Unity.
+Native Prompt provides platform-native alerts, bottom sheets, and toasts for Unity.
 
 ## Requirements
 
@@ -31,7 +31,13 @@ You can also add the package directly to your project's `Packages/manifest.json`
 
 ## Status
 
-The runtime API is currently under development.
+The public API contract is defined. Runtime dispatch and platform implementations
+are under development.
+
+## Documentation
+
+- [Public API](Documentation~/api.md)
+- [Architecture](Documentation~/architecture.md)
 
 ## License
 

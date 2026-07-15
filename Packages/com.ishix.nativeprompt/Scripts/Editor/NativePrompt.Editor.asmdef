@@ -1,0 +1,10 @@
+{
+  "name": "NativePrompt.Editor",
+  "rootNamespace": "NativePrompt.Editor",
+  "references": [
+    "NativePrompt"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

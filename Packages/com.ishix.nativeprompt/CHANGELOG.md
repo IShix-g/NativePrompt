@@ -7,4 +7,7 @@ All notable changes to this package are documented in this file.
 ### Added
 
 - Initial UPM package structure.
-- Runtime assembly for the `IShix.NativePrompt` namespace.
+- Public `NP` facade and Alert, Bottom Sheet, and Toast API contracts.
+- Runtime and Editor assembly boundaries for the `NativePrompt` and
+  `NativePrompt.Editor` namespaces.
+- API and architecture documentation.

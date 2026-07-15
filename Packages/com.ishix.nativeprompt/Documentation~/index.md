@@ -14,4 +14,10 @@ Install the package from a Git URL in Unity Package Manager:
 https://github.com/IShix-g/NativePrompt.git
 ```
 
-The runtime API is currently under development.
+## Documentation
+
+- [Public API](api.md)
+- [Architecture](architecture.md)
+
+The public API contract is defined. Runtime dispatch and platform implementations
+are under development.
