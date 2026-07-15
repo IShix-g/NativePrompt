@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using NativePrompt.Editor;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace NativePrompt.Tests
 {
@@ -102,6 +105,156 @@ namespace NativePrompt.Tests
                 }));
             Assert.Throws<ArgumentException>(() =>
                 NP.ShowToast(new ToastOptions { Message = "Toast", Duration = 0f }));
+        }
+
+        [Test]
+        public void BottomSheet_RejectsMissingAndExcessActions()
+        {
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowBottomSheet(new BottomSheetOptions { Actions = Array.Empty<BottomSheetAction>() }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowBottomSheet(new BottomSheetOptions
+                {
+                    Actions = new[]
+                    {
+                        new BottomSheetAction { Id = "one", Text = "One" },
+                        new BottomSheetAction { Id = "two", Text = "Two" },
+                        new BottomSheetAction { Id = "three", Text = "Three" },
+                        new BottomSheetAction { Id = "four", Text = "Four" }
+                    }
+                }));
+        }
+
+        [Test]
+        public void BottomSheet_RejectsDuplicateAndEmptyActionValues()
+        {
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowBottomSheet(new BottomSheetOptions
+                {
+                    Actions = new[]
+                    {
+                        new BottomSheetAction { Id = "same", Text = "First" },
+                        new BottomSheetAction { Id = "same", Text = "Second" }
+                    }
+                }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowBottomSheet(new BottomSheetOptions
+                {
+                    Actions = new[] { new BottomSheetAction { Id = " ", Text = "Action" } }
+                }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowBottomSheet(new BottomSheetOptions
+                {
+                    Actions = new[] { new BottomSheetAction { Id = "action", Text = " " } }
+                }));
+        }
+
+        [Test]
+        public void BottomSheet_PassesStylesAndEnabledStateToStrategy()
+        {
+            NP.ShowBottomSheet(new BottomSheetOptions
+            {
+                Actions = new[]
+                {
+                    new BottomSheetAction
+                    {
+                        Id = "default",
+                        Text = "Default",
+                        Style = BottomSheetActionStyle.Default,
+                        Enabled = true
+                    },
+                    new BottomSheetAction
+                    {
+                        Id = "destructive",
+                        Text = "Destructive",
+                        Style = BottomSheetActionStyle.Destructive,
+                        Enabled = false
+                    }
+                }
+            });
+
+            BottomSheetAction[] actions = _strategy.BottomSheets[0].Options.Actions;
+            Assert.That(actions[0].Style, Is.EqualTo(BottomSheetActionStyle.Default));
+            Assert.That(actions[0].Enabled, Is.True);
+            Assert.That(actions[1].Style, Is.EqualTo(BottomSheetActionStyle.Destructive));
+            Assert.That(actions[1].Enabled, Is.False);
+        }
+
+        [Test]
+        public void BottomSheet_ReturnsSelectionOrCancellationOnce()
+        {
+            BottomSheetResult selected = default;
+            BottomSheetResult cancelled = default;
+            int selectedCount = 0;
+            int cancelledCount = 0;
+
+            NP.ShowBottomSheet(CreateBottomSheet("select"), result =>
+            {
+                selected = result;
+                selectedCount++;
+            });
+            NP.ShowBottomSheet(CreateBottomSheet("cancel"), result =>
+            {
+                cancelled = result;
+                cancelledCount++;
+            });
+
+            string selectedRequestId = _strategy.BottomSheets[0].RequestId;
+            string cancelledRequestId = _strategy.BottomSheets[1].RequestId;
+            NativePromptCallbackReceiver.BottomSheetActionSelected(selectedRequestId, "select");
+            NativePromptCallbackReceiver.BottomSheetCancelled(selectedRequestId);
+            NativePromptCallbackReceiver.BottomSheetCancelled(cancelledRequestId);
+            NativePromptCallbackReceiver.BottomSheetActionSelected(cancelledRequestId, "cancel");
+
+            Assert.That(selectedCount, Is.EqualTo(1));
+            Assert.That(selected.IsCancelled, Is.False);
+            Assert.That(selected.ActionId, Is.EqualTo("select"));
+            Assert.That(cancelledCount, Is.EqualTo(1));
+            Assert.That(cancelled.IsCancelled, Is.True);
+            Assert.That(cancelled.ActionId, Is.Null);
+        }
+
+        [Test]
+        public void EditorBottomSheet_LogsOptionsAndCompletesAsCancelled()
+        {
+            NativePromptRuntime.SetForTesting(new EditorNativePromptStrategy(), _dispatcher);
+            _strategy.ClearResetCount();
+            const string expectedLog =
+                "NativePrompt Bottom Sheet\n" +
+                "Title: Choose\n" +
+                "Content: Details\n" +
+                "Cancel: Close\n" +
+                "Actions:\n" +
+                "- delete: Delete [Destructive, Enabled=False]";
+            LogAssert.Expect(LogType.Log, expectedLog);
+            BottomSheetResult completed = default;
+            int callbackCount = 0;
+
+            NP.ShowBottomSheet(new BottomSheetOptions
+            {
+                Title = "Choose",
+                Content = "Details",
+                CancelButtonText = "Close",
+                Actions = new[]
+                {
+                    new BottomSheetAction
+                    {
+                        Id = "delete",
+                        Text = "Delete",
+                        Style = BottomSheetActionStyle.Destructive,
+                        Enabled = false
+                    }
+                }
+            }, result =>
+            {
+                completed = result;
+                callbackCount++;
+            });
+
+            Assert.That(callbackCount, Is.EqualTo(1));
+            Assert.That(completed.IsCancelled, Is.True);
+            Assert.That(completed.ActionId, Is.Null);
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
         }
 
         [Test]

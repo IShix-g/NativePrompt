@@ -2,7 +2,8 @@
   "name": "NativePrompt.Tests.Editor",
   "rootNamespace": "NativePrompt.Tests",
   "references": [
-    "NativePrompt"
+    "NativePrompt",
+    "NativePrompt.Editor"
   ],
   "includePlatforms": [
     "Editor"
