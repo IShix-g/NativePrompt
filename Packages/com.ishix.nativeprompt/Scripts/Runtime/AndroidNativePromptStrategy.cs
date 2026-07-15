@@ -8,9 +8,12 @@ namespace NativePrompt
     internal sealed class AndroidNativePromptStrategy : INativePromptStrategy
     {
         private const string NativeClassName = "com.ishix.nativeprompt.NativeBottomSheet";
+        private const string NativeToastClassName = "com.ishix.nativeprompt.NativeToast";
         private readonly object _gate = new object();
         private readonly Dictionary<string, BottomSheetCallbackProxy> _bottomSheetCallbacks =
             new Dictionary<string, BottomSheetCallbackProxy>(StringComparer.Ordinal);
+        private readonly Dictionary<string, ToastCallbackProxy> _toastCallbacks =
+            new Dictionary<string, ToastCallbackProxy>(StringComparer.Ordinal);
 
         public void ShowAlert(string requestId, AlertOptions options) => ThrowNotImplemented();
 
@@ -40,10 +43,47 @@ namespace NativePrompt
             }
         }
 
-        public void ShowToast(string requestId, ToastOptions options) => ThrowNotImplemented();
+        public void ShowToast(string requestId, ToastOptions options)
+        {
+            var callback = new ToastCallbackProxy(this, requestId);
+            lock (_gate)
+            {
+                _toastCallbacks.Add(requestId, callback);
+            }
+
+            try
+            {
+                using (var nativeClass = new AndroidJavaClass(NativeToastClassName))
+                {
+                    nativeClass.CallStatic(
+                        "show",
+                        requestId,
+                        options.Message,
+                        options.Duration,
+                        options.AutoDismiss,
+                        options.DismissOnTap,
+                        (int)options.Position,
+                        callback);
+                }
+            }
+            catch
+            {
+                RemoveToastCallback(requestId, callback);
+                throw;
+            }
+        }
 
         public void DismissToast(string requestId)
         {
+            lock (_gate)
+            {
+                _toastCallbacks.Remove(requestId);
+            }
+
+            using (var nativeClass = new AndroidJavaClass(NativeToastClassName))
+            {
+                nativeClass.CallStatic("dismiss", requestId);
+            }
         }
 
         public void Reset()
@@ -51,9 +91,15 @@ namespace NativePrompt
             lock (_gate)
             {
                 _bottomSheetCallbacks.Clear();
+                _toastCallbacks.Clear();
             }
 
             using (var nativeClass = new AndroidJavaClass(NativeClassName))
+            {
+                nativeClass.CallStatic("reset");
+            }
+
+            using (var nativeClass = new AndroidJavaClass(NativeToastClassName))
             {
                 nativeClass.CallStatic("reset");
             }
@@ -95,6 +141,34 @@ namespace NativePrompt
             }
         }
 
+        private void CompleteToast(
+            string requestId,
+            int reason,
+            ToastCallbackProxy callback)
+        {
+            if (RemoveToastCallback(requestId, callback))
+            {
+                NativePromptCallbackReceiver.ToastDismissed(
+                    requestId,
+                    (ToastDismissReason)reason);
+            }
+        }
+
+        private bool RemoveToastCallback(string requestId, ToastCallbackProxy callback)
+        {
+            lock (_gate)
+            {
+                if (!_toastCallbacks.TryGetValue(requestId, out ToastCallbackProxy current) ||
+                    !ReferenceEquals(current, callback))
+                {
+                    return false;
+                }
+
+                _toastCallbacks.Remove(requestId);
+                return true;
+            }
+        }
+
         private sealed class BottomSheetCallbackProxy : AndroidJavaProxy
         {
             private readonly AndroidNativePromptStrategy _owner;
@@ -122,6 +196,29 @@ namespace NativePrompt
                 if (requestId == _requestId)
                 {
                     _owner.CompleteCancellation(requestId, this);
+                }
+            }
+        }
+
+        private sealed class ToastCallbackProxy : AndroidJavaProxy
+        {
+            private readonly AndroidNativePromptStrategy _owner;
+            private readonly string _requestId;
+
+            internal ToastCallbackProxy(
+                AndroidNativePromptStrategy owner,
+                string requestId)
+                : base(NativeToastClassName + "$Callback")
+            {
+                _owner = owner;
+                _requestId = requestId;
+            }
+
+            public void onDismissed(string requestId, int reason)
+            {
+                if (requestId == _requestId)
+                {
+                    _owner.CompleteToast(requestId, reason, this);
                 }
             }
         }

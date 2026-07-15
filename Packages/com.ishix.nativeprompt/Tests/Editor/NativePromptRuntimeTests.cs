@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using NativePrompt.Editor;
 using NUnit.Framework;
@@ -105,6 +106,22 @@ namespace NativePrompt.Tests
                 }));
             Assert.Throws<ArgumentException>(() =>
                 NP.ShowToast(new ToastOptions { Message = "Toast", Duration = 0f }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowToast(new ToastOptions { Message = null }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowToast(new ToastOptions { Message = "   " }));
+        }
+
+        [Test]
+        public void Toast_NormalizesDefaultValues()
+        {
+            NP.ShowToast(new ToastOptions { Message = "Toast" });
+
+            ToastOptions options = _strategy.Toasts[0].Options;
+            Assert.That(options.Duration, Is.EqualTo(2.5f));
+            Assert.That(options.AutoDismiss, Is.True);
+            Assert.That(options.DismissOnTap, Is.True);
+            Assert.That(options.Position, Is.EqualTo(ToastPosition.Bottom));
         }
 
         [Test]
@@ -391,6 +408,65 @@ namespace NativePrompt.Tests
             Assert.That(callbackCount, Is.EqualTo(1));
             Assert.That(reason, Is.EqualTo(ToastDismissReason.ManuallyDismissed));
             Assert.That(_strategy.DismissedToastIds, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void Toast_ReturnsTimedOutAndTappedOnlyOnce()
+        {
+            var reasons = new List<ToastDismissReason>();
+
+            NP.ShowToast(new ToastOptions { Message = "Timeout" }, reasons.Add);
+            string timedOutId = _strategy.Toasts[0].RequestId;
+            NativePromptCallbackReceiver.ToastDismissed(
+                timedOutId,
+                ToastDismissReason.TimedOut);
+            NativePromptCallbackReceiver.ToastDismissed(
+                timedOutId,
+                ToastDismissReason.Tapped);
+
+            NP.ShowToast(new ToastOptions { Message = "Tap" }, reasons.Add);
+            string tappedId = _strategy.Toasts[1].RequestId;
+            NativePromptCallbackReceiver.ToastDismissed(
+                tappedId,
+                ToastDismissReason.Tapped);
+            NativePromptCallbackReceiver.ToastDismissed(
+                tappedId,
+                ToastDismissReason.TimedOut);
+
+            Assert.That(reasons, Is.EqualTo(new[]
+            {
+                ToastDismissReason.TimedOut,
+                ToastDismissReason.Tapped
+            }));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [UnityTest]
+        public IEnumerator EditorToast_LogsAndCompletesAfterTimeout()
+        {
+            NativePromptRuntime.SetForTesting(new EditorNativePromptStrategy(), _dispatcher);
+            LogAssert.Expect(LogType.Log, "NativePrompt Toast: Saved");
+            int callbackCount = 0;
+            ToastDismissReason reason = default;
+
+            NP.ShowToast(
+                new ToastOptions { Message = "Saved", Duration = 0.01f },
+                value =>
+                {
+                    callbackCount++;
+                    reason = value;
+                });
+
+            double deadline = UnityEditor.EditorApplication.timeSinceStartup + 1.0;
+            while (callbackCount == 0 &&
+                   UnityEditor.EditorApplication.timeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+
+            Assert.That(callbackCount, Is.EqualTo(1));
+            Assert.That(reason, Is.EqualTo(ToastDismissReason.TimedOut));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
         }
 
         [Test]

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,6 +8,9 @@ namespace NativePrompt.Editor
     [InitializeOnLoad]
     internal sealed class EditorNativePromptStrategy : INativePromptStrategy
     {
+        private readonly Dictionary<string, double> _toastDeadlines =
+            new Dictionary<string, double>(StringComparer.Ordinal);
+
         static EditorNativePromptStrategy()
         {
             NativePromptStrategyRegistry.RegisterEditorFactory(
@@ -26,15 +30,69 @@ namespace NativePrompt.Editor
 
         public void ShowToast(string requestId, ToastOptions options)
         {
-            ThrowNotImplemented();
+            Debug.Log($"NativePrompt Toast: {options.Message}");
+            if (!options.AutoDismiss)
+            {
+                return;
+            }
+
+            _toastDeadlines[requestId] = EditorApplication.timeSinceStartup + options.Duration;
+            EditorApplication.update -= UpdateToasts;
+            EditorApplication.update += UpdateToasts;
         }
 
         public void DismissToast(string requestId)
         {
+            _toastDeadlines.Remove(requestId);
+            UnsubscribeWhenIdle();
         }
 
         public void Reset()
         {
+            _toastDeadlines.Clear();
+            EditorApplication.update -= UpdateToasts;
+        }
+
+        private void UpdateToasts()
+        {
+            double now = EditorApplication.timeSinceStartup;
+            string[] requestIds = null;
+            int count = 0;
+            foreach (KeyValuePair<string, double> toast in _toastDeadlines)
+            {
+                if (toast.Value > now)
+                {
+                    continue;
+                }
+
+                if (requestIds == null)
+                {
+                    requestIds = new string[_toastDeadlines.Count];
+                }
+
+                requestIds[count++] = toast.Key;
+            }
+
+            for (int index = 0; index < count; index++)
+            {
+                string requestId = requestIds[index];
+                if (_toastDeadlines.Remove(requestId))
+                {
+                    NativePromptCallbackReceiver.ToastDismissed(
+                        requestId,
+                        ToastDismissReason.TimedOut);
+                }
+            }
+
+            UnsubscribeWhenIdle();
+        }
+
+        private void UnsubscribeWhenIdle()
+        {
+            if (_toastDeadlines.Count == 0)
+            {
+                EditorApplication.update -= UpdateToasts;
+            }
         }
 
         private static void ThrowNotImplemented()
