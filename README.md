@@ -74,6 +74,9 @@ Use the sample in the Unity Editor for API-flow checks and on iOS or Android for
 native appearance checks. The accompanying PlayMode tests are located at
 `Assets/Samples/NativePrompt/Tests/PlayMode`.
 
+The plugin EditMode tests are located at `Assets/Tests/Editor` so test-only code
+is kept outside the distributable package.
+
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).

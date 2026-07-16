@@ -52,10 +52,14 @@ namespace NativePrompt.Samples.Tests
         public IEnumerator LogicalViewportMaintainsNineBySixteenRatio()
         {
             NativePromptSampleController controller = Object.FindFirstObjectByType<NativePromptSampleController>();
-            VisualElement viewport = controller.GetComponent<UIDocument>()
-                .rootVisualElement.Q<VisualElement>("logical-viewport");
+            UIDocument document = controller.GetComponent<UIDocument>();
+            VisualElement viewport = document.rootVisualElement.Q<VisualElement>("logical-viewport");
             yield return null;
 
+            Assert.That(document.panelSettings.themeStyleSheet, Is.Not.Null);
+            Assert.That(document.panelSettings.scaleMode, Is.EqualTo(PanelScaleMode.ScaleWithScreenSize));
+            Assert.That(document.panelSettings.screenMatchMode, Is.EqualTo(PanelScreenMatchMode.MatchWidthOrHeight));
+            Assert.That(document.panelSettings.match, Is.Zero);
             Assert.That(viewport.resolvedStyle.width, Is.GreaterThan(0f));
             Assert.That(viewport.resolvedStyle.height, Is.GreaterThan(0f));
             Assert.That(
@@ -63,6 +67,32 @@ namespace NativePrompt.Samples.Tests
                 Is.EqualTo(NativePromptSampleController.LogicalAspectRatio).Within(0.001f));
             Assert.That(viewport.resolvedStyle.width, Is.LessThanOrEqualTo(NativePromptSampleController.LogicalWidth));
             Assert.That(viewport.resolvedStyle.height, Is.LessThanOrEqualTo(NativePromptSampleController.LogicalHeight));
+        }
+
+        [UnityTest]
+        public IEnumerator ButtonsUseTwoColumnsWithoutOverlappingSections()
+        {
+            NativePromptSampleController controller = Object.FindFirstObjectByType<NativePromptSampleController>();
+            VisualElement root = controller.GetComponent<UIDocument>().rootVisualElement;
+            yield return null;
+
+            Button alertContent = root.Q<Button>("alert-content-button");
+            Button alertYes = root.Q<Button>("alert-yes-button");
+            Button alertNo = root.Q<Button>("alert-no-button");
+            Button alertFull = root.Q<Button>("alert-full-button");
+            Button sheetStandard = root.Q<Button>("sheet-standard-button");
+            Button sheetDisabled = root.Q<Button>("sheet-disabled-button");
+            Button toastAuto = root.Q<Button>("toast-auto-button");
+            Button toastManual = root.Q<Button>("toast-manual-button");
+            Button toastDismiss = root.Q<Button>("toast-dismiss-button");
+            VisualElement resultPanel = root.Q<VisualElement>("result-panel");
+
+            Assert.That(alertContent.worldBound.y, Is.EqualTo(alertYes.worldBound.y).Within(0.5f));
+            Assert.That(alertNo.worldBound.y, Is.EqualTo(alertFull.worldBound.y).Within(0.5f));
+            Assert.That(alertFull.worldBound.yMax, Is.LessThan(sheetStandard.worldBound.yMin));
+            Assert.That(sheetDisabled.worldBound.yMax, Is.LessThan(toastAuto.worldBound.yMin));
+            Assert.That(toastManual.worldBound.y, Is.EqualTo(toastDismiss.worldBound.y).Within(0.5f));
+            Assert.That(toastDismiss.worldBound.yMax, Is.LessThan(resultPanel.worldBound.yMin));
         }
 
         [UnityTest]
