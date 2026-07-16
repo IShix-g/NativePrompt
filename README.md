@@ -73,7 +73,8 @@ public sealed class NativePromptQuickStart : MonoBehaviour
                 Title = "Saved",
                 Content = "Your changes were saved."
             },
-            result => Debug.Log($"Alert result: {result}"));
+            result => Debug.Log($"Alert result: {result}"))
+            .AddTo(this);
     }
 }
 ```
@@ -313,8 +314,30 @@ public sealed class NativeToastExample : MonoBehaviour
 
 Every `Show*()` method returns a prompt-specific handle: `AlertHandle`,
 `BottomSheetHandle`, or `ToastHandle`. All three implement `IPromptHandle` and
-provide an idempotent `Dismiss()` method, so calling `Dismiss()` more than once is
-safe.
+`IDisposable`. Calling `Dismiss()` closes the prompt and reports its normal
+type-specific dismissal result to the individual callback and static completion
+event. Calling `Dispose()` silently removes the prompt without either notification.
+Both operations are idempotent.
+
+Use `AddTo(this)` when a prompt belongs to a `MonoBehaviour`. It returns the same
+handle and silently disposes the prompt when that component or its GameObject is
+destroyed, including scene unload:
+
+```csharp
+NP.ShowAlert(
+    new AlertOptions
+    {
+        Content = "Continue?",
+        YesButtonText = "Yes",
+        NoButtonText = "No"
+    },
+    result => UpdateView(result))
+    .AddTo(this);
+```
+
+`AddTo` follows destruction only. Disabling the component, setting
+`enabled = false`, or deactivating its GameObject does not dispose the prompt. A
+destroyed or null owner is rejected with an argument exception.
 
 Each handle exposes a unique, library-generated `RequestId` and the optional `Tag`
 and `GroupId` copied from its options. Tags and group IDs may be duplicated; use

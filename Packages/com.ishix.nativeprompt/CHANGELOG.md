@@ -14,6 +14,10 @@ All notable changes to this package are documented in this file.
   `BottomSheetCompleted`, `ToastShown`, and `ToastDismissed` lifecycle events.
 - Coverage for active and queued Alert dismissal, request isolation, metadata
   snapshots, lifecycle ordering, and exception isolation.
+- `IDisposable` support for every prompt handle and `AddTo(MonoBehaviour)` lifetime
+  binding through `destroyCancellationToken`.
+- Request-scoped silent disposal for active, queued, and pending-delivery prompts,
+  including lifecycle-registration cleanup and callback suppression coverage.
 
 ### Changed
 

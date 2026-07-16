@@ -108,5 +108,36 @@ namespace NativePrompt.Samples.Tests
                 .rootVisualElement.Q<Label>("result-value");
             Assert.That(result.text, Is.EqualTo(expected));
         }
+
+        [UnityTest]
+        public IEnumerator DestroyingOwnerSilentlyDisposesPrompt()
+        {
+            var ownerObject = new GameObject("Prompt owner");
+            PromptHandlePlayModeOwner owner =
+                ownerObject.AddComponent<PromptHandlePlayModeOwner>();
+            int callbackCount = 0;
+            bool destroyTokenCancelled = false;
+            owner.destroyCancellationToken.Register(() => destroyTokenCancelled = true);
+            LogAssert.Expect(LogType.Log, "NativePrompt Toast: Lifecycle");
+            ToastHandle handle = NP.ShowToast(
+                new ToastOptions
+                {
+                    Message = "Lifecycle",
+                    AutoDismiss = false
+                },
+                _ => callbackCount++).AddTo(owner);
+
+            Object.Destroy(ownerObject);
+            yield return null;
+            handle.Dismiss();
+            yield return null;
+
+            Assert.That(destroyTokenCancelled, Is.True);
+            Assert.That(callbackCount, Is.Zero);
+        }
+    }
+
+    internal sealed class PromptHandlePlayModeOwner : MonoBehaviour
+    {
     }
 }

@@ -68,14 +68,18 @@ namespace NativePrompt
     /// </summary>
     public sealed class ToastHandle : IPromptHandle
     {
-        private Action _dismiss;
+        private readonly PromptHandleLifetime _lifetime;
 
-        internal ToastHandle(string requestId, string tag, string groupId, Action dismiss)
+        internal ToastHandle(
+            string requestId,
+            string tag,
+            string groupId,
+            PromptHandleLifetime lifetime)
         {
             RequestId = requestId;
             Tag = tag;
             GroupId = groupId;
-            _dismiss = dismiss ?? throw new ArgumentNullException(nameof(dismiss));
+            _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
         }
 
         /// <inheritdoc />
@@ -92,8 +96,17 @@ namespace NativePrompt
         /// </summary>
         public void Dismiss()
         {
-            Interlocked.Exchange(ref _dismiss, null)?.Invoke();
+            _lifetime.Dismiss();
         }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            _lifetime.Dispose();
+        }
+
+        internal void AddTo(CancellationToken cancellationToken) =>
+            _lifetime.AddTo(cancellationToken);
     }
 
     /// <summary>Provides identity information when a toast is displayed.</summary>

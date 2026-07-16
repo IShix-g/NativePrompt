@@ -107,9 +107,14 @@ Toast positions account for the platform safe area.
 
 ## Handles and identity metadata
 
-`AlertHandle`, `BottomSheetHandle`, and `ToastHandle` implement `IPromptHandle`.
-Every handle exposes a library-generated `RequestId`, the optional `Tag` and
-`GroupId` supplied in its options, and an idempotent `Dismiss()` method.
+`AlertHandle`, `BottomSheetHandle`, and `ToastHandle` implement `IPromptHandle` and
+`IDisposable`. Every handle exposes a library-generated `RequestId`, the optional
+`Tag` and `GroupId` supplied in its options, and two idempotent completion paths:
+
+- `Dismiss()` closes the prompt and delivers the existing type-specific dismissal
+  result to the individual callback and static completion event.
+- `Dispose()` silently removes the prompt or waiting request. It does not invoke
+  the individual callback or static completion event.
 
 ```csharp
 AlertOptions options = new AlertOptions
@@ -125,15 +130,33 @@ AlertHandle alert = NP.ShowAlert(options);
 Debug.Log($"Request: {alert.RequestId}, tag: {alert.Tag}, group: {alert.GroupId}");
 ```
 
+For automatic ownership, call `AddTo(MonoBehaviour owner)`. The extension binds
+the handle to `owner.destroyCancellationToken` and returns the same concrete handle:
+
+```csharp
+NP.ShowAlert(options, result => UpdateView(result)).AddTo(this);
+```
+
+Destroying the component or GameObject, or unloading its scene, silently disposes
+the prompt. `AddTo` does not react to `OnDisable`, `enabled = false`, or GameObject
+deactivation. Passing a null or already-destroyed owner throws an argument
+exception instead of silently leaving the handle unmanaged.
+
+After a handle completes or is disposed, later `Dismiss()` and `Dispose()` calls
+are no-ops. Late platform callbacks are ignored. If a platform result or manual
+dismissal is waiting for main-thread delivery, `Dispose()` still suppresses its
+individual callback and static completion event; it does not issue a duplicate
+platform dismissal.
+
 `RequestId` is unique per prompt request and cannot be supplied through options.
 `Tag` and `GroupId` may be duplicated; they are descriptive metadata, not access
 control tokens or uniqueness guarantees. Values are captured by `Show*()`, so later
 changes to the options object do not affect an in-progress prompt.
 
 NativePrompt intentionally has no `DismissAll()`, `DismissByTag()`, or
-`DismissGroup()` API. Keep the handles owned by a screen, operation, or component
-and dismiss those handles when that owner ends. `GroupId` can describe that
-ownership, but does not itself grant control of other prompts.
+`DismissGroup()` API. Keep handles for explicit manual management, or bind each
+handle to its owning component with `AddTo`. `GroupId` can describe ownership, but
+does not itself grant control of other prompts.
 
 ## Lifecycle events
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Threading;
 using NativePrompt.Editor;
 using NUnit.Framework;
 using UnityEngine;
@@ -640,6 +641,345 @@ namespace NativePrompt.Tests
         }
 
         [Test]
+        public void LifecycleCancellation_SilentlyDisposesEachPromptType()
+        {
+            var cancellation = new CancellationTokenSource();
+            int callbackCount = 0;
+            int eventCount = 0;
+            EventHandler<AlertCompletedEventArgs> onAlert = (_, __) => eventCount++;
+            EventHandler<BottomSheetCompletedEventArgs> onSheet = (_, __) => eventCount++;
+            EventHandler<ToastDismissedEventArgs> onToast = (_, __) => eventCount++;
+            NP.AlertCompleted += onAlert;
+            NP.BottomSheetCompleted += onSheet;
+            NP.ToastDismissed += onToast;
+            try
+            {
+                AlertHandle alert = NP.ShowAlert(
+                    new AlertOptions { Content = "Alert" },
+                    _ => callbackCount++);
+                BottomSheetHandle sheet = NP.ShowBottomSheet(
+                    CreateBottomSheet("sheet"),
+                    _ => callbackCount++);
+                ToastHandle toast = NP.ShowToast(
+                    new ToastOptions { Message = "Toast" },
+                    _ => callbackCount++);
+
+                alert.AddTo(cancellation.Token);
+                sheet.AddTo(cancellation.Token);
+                toast.AddTo(cancellation.Token);
+                cancellation.Cancel();
+
+                Assert.That(_strategy.DismissedAlertIds, Is.EqualTo(new[] { alert.RequestId }));
+                Assert.That(
+                    _strategy.DismissedBottomSheetIds,
+                    Is.EqualTo(new[] { sheet.RequestId }));
+                Assert.That(_strategy.DismissedToastIds, Is.EqualTo(new[] { toast.RequestId }));
+                Assert.That(callbackCount, Is.Zero);
+                Assert.That(eventCount, Is.Zero);
+                Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+
+                NativePromptCallbackReceiver.AlertCompleted(alert.RequestId, AlertResult.Yes);
+                NativePromptCallbackReceiver.BottomSheetCancelled(sheet.RequestId);
+                NativePromptCallbackReceiver.ToastDismissed(
+                    toast.RequestId,
+                    ToastDismissReason.TimedOut);
+                alert.Dismiss();
+                sheet.Dispose();
+                toast.Dispose();
+
+                Assert.That(callbackCount, Is.Zero);
+                Assert.That(eventCount, Is.Zero);
+            }
+            finally
+            {
+                NP.AlertCompleted -= onAlert;
+                NP.BottomSheetCompleted -= onSheet;
+                NP.ToastDismissed -= onToast;
+                cancellation.Dispose();
+            }
+        }
+
+        [Test]
+        public void AlertDispose_RemovesQueuedRequestAndStartsNextAfterActiveRequest()
+        {
+            int disposedCallbackCount = 0;
+            int remainingCallbackCount = 0;
+            AlertHandle active = NP.ShowAlert(
+                new AlertOptions { Content = "Active" },
+                _ => disposedCallbackCount++);
+            AlertHandle queued = NP.ShowAlert(
+                new AlertOptions { Content = "Dispose while queued" },
+                _ => disposedCallbackCount++);
+            AlertHandle remaining = NP.ShowAlert(
+                new AlertOptions { Content = "Remaining" },
+                _ => remainingCallbackCount++);
+
+            queued.Dispose();
+            active.Dispose();
+
+            Assert.That(_strategy.Alerts, Has.Count.EqualTo(2));
+            Assert.That(_strategy.Alerts[1].RequestId, Is.EqualTo(remaining.RequestId));
+            Assert.That(_strategy.DismissedAlertIds, Is.EqualTo(new[] { active.RequestId }));
+            Assert.That(disposedCallbackCount, Is.Zero);
+
+            NativePromptCallbackReceiver.AlertCompleted(remaining.RequestId, AlertResult.Closed);
+
+            Assert.That(remainingCallbackCount, Is.EqualTo(1));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void BottomSheetDispose_DoesNotAffectAnotherRequest()
+        {
+            int disposedCallbackCount = 0;
+            int remainingCallbackCount = 0;
+            BottomSheetHandle disposed = NP.ShowBottomSheet(
+                CreateBottomSheet("disposed"),
+                _ => disposedCallbackCount++);
+            BottomSheetHandle remaining = NP.ShowBottomSheet(
+                CreateBottomSheet("remaining"),
+                _ => remainingCallbackCount++);
+
+            disposed.Dispose();
+            NativePromptCallbackReceiver.BottomSheetActionSelected(
+                remaining.RequestId,
+                "remaining");
+
+            Assert.That(disposedCallbackCount, Is.Zero);
+            Assert.That(remainingCallbackCount, Is.EqualTo(1));
+            Assert.That(
+                _strategy.DismissedBottomSheetIds,
+                Is.EqualTo(new[] { disposed.RequestId }));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void ToastDispose_DuringReplacementDoesNotAffectCurrentRequest()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            int disposedCallbackCount = 0;
+            int currentCallbackCount = 0;
+            ToastHandle disposed = NP.ShowToast(
+                new ToastOptions { Message = "Disposed" },
+                _ => disposedCallbackCount++);
+            ToastHandle current = NP.ShowToast(
+                new ToastOptions { Message = "Current" },
+                _ => currentCallbackCount++);
+
+            disposed.Dispose();
+            NativePromptCallbackReceiver.ToastDismissed(
+                current.RequestId,
+                ToastDismissReason.Tapped);
+            queuedDispatcher.Drain();
+
+            Assert.That(disposedCallbackCount, Is.Zero);
+            Assert.That(currentCallbackCount, Is.EqualTo(1));
+            Assert.That(_strategy.DismissedToastIds, Is.EqualTo(new[] { disposed.RequestId }));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void Dispose_AfterNativeResultBeforeDispatchSuppressesCallbacksAndEvents()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            int callbackCount = 0;
+            int eventCount = 0;
+            EventHandler<AlertCompletedEventArgs> onAlert = (_, __) => eventCount++;
+            EventHandler<BottomSheetCompletedEventArgs> onSheet = (_, __) => eventCount++;
+            EventHandler<ToastDismissedEventArgs> onToast = (_, __) => eventCount++;
+            NP.AlertCompleted += onAlert;
+            NP.BottomSheetCompleted += onSheet;
+            NP.ToastDismissed += onToast;
+            try
+            {
+                AlertHandle alert = NP.ShowAlert(
+                    new AlertOptions { Content = "Alert" },
+                    _ => callbackCount++);
+                BottomSheetHandle sheet = NP.ShowBottomSheet(
+                    CreateBottomSheet("sheet"),
+                    _ => callbackCount++);
+                ToastHandle toast = NP.ShowToast(
+                    new ToastOptions { Message = "Toast" },
+                    _ => callbackCount++);
+
+                NativePromptCallbackReceiver.AlertCompleted(alert.RequestId, AlertResult.Yes);
+                NativePromptCallbackReceiver.BottomSheetCancelled(sheet.RequestId);
+                NativePromptCallbackReceiver.ToastDismissed(
+                    toast.RequestId,
+                    ToastDismissReason.TimedOut);
+
+                alert.Dispose();
+                sheet.Dispose();
+                toast.Dispose();
+                queuedDispatcher.Drain();
+
+                Assert.That(callbackCount, Is.Zero);
+                Assert.That(eventCount, Is.Zero);
+                Assert.That(_strategy.DismissedAlertIds, Is.Empty);
+                Assert.That(_strategy.DismissedBottomSheetIds, Is.Empty);
+                Assert.That(_strategy.DismissedToastIds, Is.Empty);
+                Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+            }
+            finally
+            {
+                NP.AlertCompleted -= onAlert;
+                NP.BottomSheetCompleted -= onSheet;
+                NP.ToastDismissed -= onToast;
+            }
+        }
+
+        [Test]
+        public void Dispose_AfterDismissBeforeDispatchDoesNotDismissTwiceOrNotify()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            int callbackCount = 0;
+            int eventCount = 0;
+            EventHandler<AlertCompletedEventArgs> onCompleted = (_, __) => eventCount++;
+            NP.AlertCompleted += onCompleted;
+            try
+            {
+                AlertHandle handle = NP.ShowAlert(
+                    new AlertOptions { Content = "Alert" },
+                    _ => callbackCount++);
+
+                handle.Dismiss();
+                handle.Dispose();
+                queuedDispatcher.Drain();
+
+                Assert.That(_strategy.DismissedAlertIds, Is.EqualTo(new[] { handle.RequestId }));
+                Assert.That(callbackCount, Is.Zero);
+                Assert.That(eventCount, Is.Zero);
+                Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+            }
+            finally
+            {
+                NP.AlertCompleted -= onCompleted;
+            }
+        }
+
+        [Test]
+        public void Dispose_DuringPlatformDismissAdvancesAlertOnlyAfterDismissReturns()
+        {
+            AlertHandle active = NP.ShowAlert(new AlertOptions { Content = "Active" });
+            AlertHandle queued = NP.ShowAlert(new AlertOptions { Content = "Queued" });
+            _strategy.OnDismissAlert = () =>
+            {
+                active.Dispose();
+                Assert.That(_strategy.Alerts, Has.Count.EqualTo(1));
+            };
+
+            active.Dismiss();
+            _strategy.OnDismissAlert = null;
+
+            Assert.That(_strategy.DismissedAlertIds, Is.EqualTo(new[] { active.RequestId }));
+            Assert.That(_strategy.Alerts, Has.Count.EqualTo(2));
+            Assert.That(_strategy.Alerts[1].RequestId, Is.EqualTo(queued.RequestId));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.EqualTo(1));
+
+            queued.Dispose();
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void Dispose_AfterIndividualCallbackStartsDoesNotInterruptCompletionEvent()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            AlertHandle handle = null;
+            int callbackCount = 0;
+            int eventCount = 0;
+            EventHandler<AlertCompletedEventArgs> onCompleted = (_, __) => eventCount++;
+            NP.AlertCompleted += onCompleted;
+            try
+            {
+                handle = NP.ShowAlert(
+                    new AlertOptions { Content = "Alert" },
+                    _ =>
+                    {
+                        callbackCount++;
+                        handle.Dispose();
+                    });
+
+                NativePromptCallbackReceiver.AlertCompleted(handle.RequestId, AlertResult.Yes);
+                queuedDispatcher.Drain();
+
+                Assert.That(callbackCount, Is.EqualTo(1));
+                Assert.That(eventCount, Is.EqualTo(1));
+                Assert.That(_strategy.DismissedAlertIds, Is.Empty);
+            }
+            finally
+            {
+                NP.AlertCompleted -= onCompleted;
+            }
+        }
+
+        [Test]
+        public void AddTo_RejectsDestroyedOwnerAndIgnoresDisable()
+        {
+            var ownerObject = new GameObject("Prompt owner");
+            PromptHandleTestOwner owner = ownerObject.AddComponent<PromptHandleTestOwner>();
+            AlertHandle active = NP.ShowAlert(new AlertOptions { Content = "Active" });
+
+            Assert.Throws<ArgumentNullException>(() => active.AddTo(null));
+            Assert.That(active.AddTo(owner), Is.SameAs(active));
+            owner.enabled = false;
+            ownerObject.SetActive(false);
+
+            Assert.That(_strategy.DismissedAlertIds, Is.Empty);
+
+            var destroyedObject = new GameObject("Destroyed owner");
+            PromptHandleTestOwner destroyedOwner =
+                destroyedObject.AddComponent<PromptHandleTestOwner>();
+            UnityEngine.Object.DestroyImmediate(destroyedObject);
+            Assert.Throws<ArgumentNullException>(() => active.AddTo(destroyedOwner));
+
+            active.Dispose();
+            UnityEngine.Object.DestroyImmediate(ownerObject);
+        }
+
+        [Test]
+        public void CompletedHandle_ReleasesOwnerRegistration()
+        {
+            var ownerObject = new GameObject("Prompt owner");
+            PromptHandleTestOwner owner = ownerObject.AddComponent<PromptHandleTestOwner>();
+            int callbackCount = 0;
+            ToastHandle handle = NP.ShowToast(
+                new ToastOptions { Message = "Toast" },
+                _ => callbackCount++).AddTo(owner);
+
+            NativePromptCallbackReceiver.ToastDismissed(
+                handle.RequestId,
+                ToastDismissReason.TimedOut);
+            UnityEngine.Object.DestroyImmediate(ownerObject);
+            handle.Dispose();
+
+            Assert.That(callbackCount, Is.EqualTo(1));
+            Assert.That(_strategy.DismissedToastIds, Is.Empty);
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void LifecycleCancellation_DismissFailureIsLoggedAndDoesNotEscape()
+        {
+            var cancellation = new CancellationTokenSource();
+            _strategy.DismissAlertException = new InvalidOperationException("dismiss failure");
+            NP.ShowAlert(new AlertOptions { Content = "Alert" })
+                .AddTo(cancellation.Token);
+            LogAssert.Expect(LogType.Exception, new Regex("dismiss failure"));
+
+            Assert.DoesNotThrow(cancellation.Cancel);
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+            cancellation.Dispose();
+        }
+
+        [Test]
         public void CallbackAndEventExceptions_DoNotStopLaterNotificationsOrAlertQueue()
         {
             int laterSubscriberCount = 0;
@@ -791,9 +1131,12 @@ namespace NativePrompt.Tests
             var queuedDispatcher = new QueuedDispatcher();
             NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
             _strategy.ClearResetCount();
+            var ownerObject = new GameObject("Prompt owner");
+            PromptHandleTestOwner owner = ownerObject.AddComponent<PromptHandleTestOwner>();
             int callbackCount = 0;
 
-            NP.ShowAlert(new AlertOptions { Content = "Active" }, _ => callbackCount++);
+            NP.ShowAlert(new AlertOptions { Content = "Active" }, _ => callbackCount++)
+                .AddTo(owner);
             NP.ShowAlert(new AlertOptions { Content = "Queued" }, _ => callbackCount++);
             NP.ShowToast(new ToastOptions { Message = "Toast" }, _ => callbackCount++);
 
@@ -802,11 +1145,13 @@ namespace NativePrompt.Tests
             NativePromptCallbackReceiver.AlertCompleted(alertId, AlertResult.Closed);
 
             NativePromptRuntime.Reset();
+            UnityEngine.Object.DestroyImmediate(ownerObject);
             NativePromptCallbackReceiver.ToastDismissed(toastId, ToastDismissReason.TimedOut);
             queuedDispatcher.Drain();
 
             Assert.That(callbackCount, Is.Zero);
             Assert.That(_strategy.Alerts, Has.Count.EqualTo(1));
+            Assert.That(_strategy.DismissedAlertIds, Is.Empty);
             Assert.That(_strategy.ResetCount, Is.EqualTo(1));
             Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
         }
@@ -838,6 +1183,10 @@ namespace NativePrompt.Tests
 
             internal int ResetCount { get; private set; }
 
+            internal Exception DismissAlertException { get; set; }
+
+            internal Action OnDismissAlert { get; set; }
+
             internal void ClearResetCount()
             {
                 ResetCount = 0;
@@ -851,6 +1200,11 @@ namespace NativePrompt.Tests
             public void DismissAlert(string requestId)
             {
                 DismissedAlertIds.Add(requestId);
+                OnDismissAlert?.Invoke();
+                if (DismissAlertException != null)
+                {
+                    throw DismissAlertException;
+                }
             }
 
             public void ShowBottomSheet(string requestId, BottomSheetOptions options)
@@ -945,5 +1299,9 @@ namespace NativePrompt.Tests
 
             internal ToastOptions Options { get; }
         }
+    }
+
+    internal sealed class PromptHandleTestOwner : MonoBehaviour
+    {
     }
 }

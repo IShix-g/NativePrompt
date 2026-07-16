@@ -4,7 +4,7 @@ using UnityEngine;
 namespace NativePrompt
 {
     /// <summary>Exposes common identity and dismissal behavior for prompt handles.</summary>
-    public interface IPromptHandle
+    public interface IPromptHandle : IDisposable
     {
         /// <summary>Gets the library-generated identifier unique to this prompt request.</summary>
         string RequestId { get; }
@@ -17,6 +17,11 @@ namespace NativePrompt
 
         /// <summary>Requests dismissal. Subsequent calls have no effect.</summary>
         void Dismiss();
+
+        /// <summary>
+        /// Silently removes this prompt without invoking its callback or completion event.
+        /// </summary>
+        new void Dispose();
     }
 
     /// <summary>Provides caller-visible identity information for a prompt lifecycle event.</summary>
@@ -142,6 +147,75 @@ namespace NativePrompt
                     Debug.LogException(exception);
                 }
             }
+        }
+    }
+
+    /// <summary>Provides GameObject-lifetime binding for prompt handles.</summary>
+    public static class PromptHandleExtensions
+    {
+        /// <summary>Silently disposes the alert when <paramref name="owner"/> is destroyed.</summary>
+        public static AlertHandle AddTo(this AlertHandle handle, MonoBehaviour owner)
+        {
+            Validate(handle, owner);
+            handle.AddTo(GetDestroyCancellationToken(owner));
+            return handle;
+        }
+
+        /// <summary>Silently disposes the bottom sheet when <paramref name="owner"/> is destroyed.</summary>
+        public static BottomSheetHandle AddTo(
+            this BottomSheetHandle handle,
+            MonoBehaviour owner)
+        {
+            Validate(handle, owner);
+            handle.AddTo(GetDestroyCancellationToken(owner));
+            return handle;
+        }
+
+        /// <summary>Silently disposes the toast when <paramref name="owner"/> is destroyed.</summary>
+        public static ToastHandle AddTo(this ToastHandle handle, MonoBehaviour owner)
+        {
+            Validate(handle, owner);
+            handle.AddTo(GetDestroyCancellationToken(owner));
+            return handle;
+        }
+
+        private static void Validate(object handle, MonoBehaviour owner)
+        {
+            if (handle == null)
+            {
+                throw new ArgumentNullException(nameof(handle));
+            }
+            if (owner == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(owner),
+                    "The owner must be a live MonoBehaviour.");
+            }
+        }
+
+        private static System.Threading.CancellationToken GetDestroyCancellationToken(
+            MonoBehaviour owner)
+        {
+            System.Threading.CancellationToken token;
+            try
+            {
+                token = owner.destroyCancellationToken;
+            }
+            catch (MissingReferenceException exception)
+            {
+                throw new ArgumentException(
+                    "The owner has already been destroyed.",
+                    nameof(owner),
+                    exception);
+            }
+            if (token.IsCancellationRequested)
+            {
+                throw new ArgumentException(
+                    "The owner has already been destroyed.",
+                    nameof(owner));
+            }
+
+            return token;
         }
     }
 }

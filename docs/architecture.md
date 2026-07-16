@@ -52,6 +52,21 @@ The shared runtime coordinator is responsible for:
 - clearing pending state safely during reset, Domain Reload, or Play Mode exit;
 - allowing the strategy to be replaced internally by tests without making it public.
 
+Each public handle owns a cancellation-token registration independently from the
+platform strategy. `AddTo(MonoBehaviour)` registers the owner's
+`destroyCancellationToken`; cancellation enters the same request-scoped silent
+dispose path as `IDisposable.Dispose()`. Normal completion, manual-dismiss delivery,
+silent disposal, and runtime reset all unregister the token and release request
+callbacks and options.
+
+Silent disposal removes only its request from the active slot, Alert FIFO queue, or
+pending main-thread delivery set. It suppresses individual and static completion
+notifications. If an active Alert is disposed, the coordinator dismisses its UI
+and advances the FIFO queue. A result already claimed for delivery, or a manual
+dismissal already sent to the platform, is cancelled without sending a second
+platform dismissal. Platform dismissal failures are logged and cannot escape an
+owner-destruction cancellation callback or prevent shared-state cleanup.
+
 No Android strategy may add a runtime dependency on Material Components, Compose,
 or another external UI library. It uses Android SDK dialogs and views.
 

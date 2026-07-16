@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 namespace NativePrompt
 {
@@ -89,14 +90,18 @@ namespace NativePrompt
     /// <summary>Provides manual control and identity information for a bottom sheet.</summary>
     public sealed class BottomSheetHandle : IPromptHandle
     {
-        private Action _dismiss;
+        private readonly PromptHandleLifetime _lifetime;
 
-        internal BottomSheetHandle(string requestId, string tag, string groupId, Action dismiss)
+        internal BottomSheetHandle(
+            string requestId,
+            string tag,
+            string groupId,
+            PromptHandleLifetime lifetime)
         {
             RequestId = requestId;
             Tag = tag;
             GroupId = groupId;
-            _dismiss = dismiss ?? throw new ArgumentNullException(nameof(dismiss));
+            _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
         }
 
         /// <inheritdoc />
@@ -111,8 +116,17 @@ namespace NativePrompt
         /// <inheritdoc />
         public void Dismiss()
         {
-            System.Threading.Interlocked.Exchange(ref _dismiss, null)?.Invoke();
+            _lifetime.Dismiss();
         }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            _lifetime.Dispose();
+        }
+
+        internal void AddTo(CancellationToken cancellationToken) =>
+            _lifetime.AddTo(cancellationToken);
     }
 
     /// <summary>Provides identity information when a bottom sheet is displayed.</summary>

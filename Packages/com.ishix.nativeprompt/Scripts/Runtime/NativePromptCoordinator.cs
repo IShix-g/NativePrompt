@@ -43,6 +43,10 @@ namespace NativePrompt
         internal AlertHandle ShowAlert(AlertOptions options, Action<AlertResult> onCompleted)
         {
             var request = new AlertRequest(NextRequestId("alert"), options, onCompleted);
+            var lifetime = new PromptHandleLifetime(
+                () => DismissAlert(request),
+                () => DisposeAlert(request));
+            request.Lifetime = lifetime;
             bool startImmediately;
             lock (_gate)
             {
@@ -63,7 +67,7 @@ namespace NativePrompt
                 request.RequestId,
                 request.Tag,
                 request.GroupId,
-                () => DismissAlert(request));
+                lifetime);
         }
 
         internal BottomSheetHandle ShowBottomSheet(
@@ -74,6 +78,10 @@ namespace NativePrompt
                 NextRequestId("bottom-sheet"),
                 options,
                 onCompleted);
+            var lifetime = new PromptHandleLifetime(
+                () => DismissBottomSheet(request),
+                () => DisposeBottomSheet(request));
+            request.Lifetime = lifetime;
             lock (_gate)
             {
                 _bottomSheets.Add(request.RequestId, request);
@@ -90,6 +98,7 @@ namespace NativePrompt
                     request.Cancelled = true;
                     _bottomSheets.Remove(request.RequestId);
                 }
+                ReleaseRequest(request);
                 throw;
             }
 
@@ -97,7 +106,7 @@ namespace NativePrompt
                 request.RequestId,
                 request.Tag,
                 request.GroupId,
-                () => DismissBottomSheet(request));
+                lifetime);
         }
 
         internal ToastHandle ShowToast(
@@ -105,6 +114,10 @@ namespace NativePrompt
             Action<ToastDismissReason> onDismissed)
         {
             var request = new ToastRequest(NextRequestId("toast"), options, onDismissed);
+            var lifetime = new PromptHandleLifetime(
+                () => DismissToast(request),
+                () => DisposeToast(request));
+            request.Lifetime = lifetime;
             ToastRequest replaced;
             lock (_gate)
             {
@@ -142,6 +155,7 @@ namespace NativePrompt
                         _activeToast = null;
                     }
                 }
+                ReleaseRequest(request);
                 throw;
             }
 
@@ -149,7 +163,7 @@ namespace NativePrompt
                 request.RequestId,
                 request.Tag,
                 request.GroupId,
-                () => DismissToast(request));
+                lifetime);
         }
 
         internal void ReceiveAlertOpened(string requestId)
@@ -256,27 +270,33 @@ namespace NativePrompt
 
         internal void Reset()
         {
+            var requests = new HashSet<PromptRequest>();
             lock (_gate)
             {
                 if (_activeAlert != null)
                 {
                     _activeAlert.Cancelled = true;
+                    requests.Add(_activeAlert);
                 }
                 foreach (AlertRequest request in _alertQueue)
                 {
                     request.Cancelled = true;
+                    requests.Add(request);
                 }
                 foreach (BottomSheetRequest request in _bottomSheets.Values)
                 {
                     request.Cancelled = true;
+                    requests.Add(request);
                 }
                 if (_activeToast != null)
                 {
                     _activeToast.Cancelled = true;
+                    requests.Add(_activeToast);
                 }
                 foreach (PromptRequest request in _pendingDeliveries)
                 {
                     request.Cancelled = true;
+                    requests.Add(request);
                 }
 
                 _alertQueue.Clear();
@@ -286,6 +306,10 @@ namespace NativePrompt
                 _pendingDeliveries.Clear();
             }
 
+            foreach (PromptRequest request in requests)
+            {
+                ReleaseRequest(request);
+            }
             _strategy.Reset();
         }
 
@@ -303,6 +327,7 @@ namespace NativePrompt
                     request.Cancelled = true;
                     next = MoveToNextAlert(request);
                 }
+                ReleaseRequest(request);
                 if (next != null)
                 {
                     StartAlert(next);
@@ -327,6 +352,10 @@ namespace NativePrompt
                     return;
                 }
                 ClaimForDelivery(request);
+                if (isActive)
+                {
+                    request.PlatformDismissRequested = true;
+                }
             }
 
             if (isActive)
@@ -337,7 +366,29 @@ namespace NativePrompt
                 }
                 finally
                 {
-                    PostAlertCompletion(request, AlertResult.Dismissed);
+                    AlertRequest next = null;
+                    bool cancelled;
+                    lock (_gate)
+                    {
+                        request.PlatformDismissCompleted = true;
+                        cancelled = request.Cancelled;
+                        if (cancelled)
+                        {
+                            next = MoveToNextAlert(request);
+                        }
+                    }
+
+                    if (cancelled)
+                    {
+                        if (next != null)
+                        {
+                            StartAlert(next);
+                        }
+                    }
+                    else
+                    {
+                        PostAlertCompletion(request, AlertResult.Dismissed);
+                    }
                 }
             }
             else
@@ -386,6 +437,118 @@ namespace NativePrompt
             finally
             {
                 PostToastCompletion(request, ToastDismissReason.ManuallyDismissed);
+            }
+        }
+
+        private void DisposeAlert(AlertRequest request)
+        {
+            bool dismissPlatform = false;
+            bool found;
+            AlertRequest next = null;
+            lock (_gate)
+            {
+                if (request.Cancelled)
+                {
+                    return;
+                }
+
+                found = _pendingDeliveries.Remove(request);
+                if (ReferenceEquals(_activeAlert, request))
+                {
+                    found = true;
+                    dismissPlatform = !request.Completed;
+                    if (!request.PlatformDismissRequested ||
+                        request.PlatformDismissCompleted)
+                    {
+                        next = MoveToNextAlert(request);
+                    }
+                }
+                else if (RemoveQueuedAlert(request))
+                {
+                    found = true;
+                }
+
+                if (!found)
+                {
+                    return;
+                }
+                request.Cancelled = true;
+            }
+
+            ReleaseRequest(request);
+            if (dismissPlatform)
+            {
+                TryPlatformAction(() => _strategy.DismissAlert(request.RequestId));
+            }
+            if (next != null)
+            {
+                TryPlatformAction(() => StartAlert(next));
+            }
+        }
+
+        private void DisposeBottomSheet(BottomSheetRequest request)
+        {
+            bool registered;
+            bool found;
+            lock (_gate)
+            {
+                if (request.Cancelled)
+                {
+                    return;
+                }
+
+                registered = _bottomSheets.TryGetValue(
+                    request.RequestId,
+                    out BottomSheetRequest current) && ReferenceEquals(current, request);
+                found = registered | _pendingDeliveries.Remove(request);
+                if (!found)
+                {
+                    return;
+                }
+
+                request.Cancelled = true;
+                if (registered)
+                {
+                    _bottomSheets.Remove(request.RequestId);
+                }
+            }
+
+            ReleaseRequest(request);
+            if (registered && !request.Completed)
+            {
+                TryPlatformAction(() => _strategy.DismissBottomSheet(request.RequestId));
+            }
+        }
+
+        private void DisposeToast(ToastRequest request)
+        {
+            bool active;
+            bool found;
+            lock (_gate)
+            {
+                if (request.Cancelled)
+                {
+                    return;
+                }
+
+                active = ReferenceEquals(_activeToast, request);
+                found = active | _pendingDeliveries.Remove(request);
+                if (!found)
+                {
+                    return;
+                }
+
+                request.Cancelled = true;
+                if (active)
+                {
+                    _activeToast = null;
+                }
+            }
+
+            ReleaseRequest(request);
+            if (active && !request.Completed)
+            {
+                TryPlatformAction(() => _strategy.DismissToast(request.RequestId));
             }
         }
 
@@ -459,12 +622,18 @@ namespace NativePrompt
                     }
                 }
 
+                if (!request.TryCompleteLifetime())
+                {
+                    request.ReleaseContent();
+                    return;
+                }
                 try
                 {
                     deliver();
                 }
                 finally
                 {
+                    request.ReleaseContent();
                     after?.Invoke();
                 }
             });
@@ -534,6 +703,24 @@ namespace NativePrompt
             }
         }
 
+        private static void TryPlatformAction(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        private static void ReleaseRequest(PromptRequest request)
+        {
+            request.TryCompleteLifetime();
+            request.ReleaseContent();
+        }
+
         private abstract class PromptRequest
         {
             protected PromptRequest(string requestId, string tag, string groupId)
@@ -549,6 +736,16 @@ namespace NativePrompt
             internal bool Opened { get; set; }
             internal bool Completed { get; set; }
             internal bool Cancelled { get; set; }
+            internal PromptHandleLifetime Lifetime { get; set; }
+
+            internal bool TryCompleteLifetime()
+            {
+                PromptHandleLifetime lifetime = Lifetime;
+                Lifetime = null;
+                return lifetime != null && lifetime.TryComplete();
+            }
+
+            internal abstract void ReleaseContent();
         }
 
         private sealed class AlertRequest : PromptRequest
@@ -563,8 +760,16 @@ namespace NativePrompt
                 Callback = callback;
             }
 
-            internal AlertOptions Options { get; }
-            internal Action<AlertResult> Callback { get; }
+            internal AlertOptions Options { get; private set; }
+            internal Action<AlertResult> Callback { get; private set; }
+            internal bool PlatformDismissRequested { get; set; }
+            internal bool PlatformDismissCompleted { get; set; }
+
+            internal override void ReleaseContent()
+            {
+                Options = null;
+                Callback = null;
+            }
         }
 
         private sealed class BottomSheetRequest : PromptRequest
@@ -578,7 +783,12 @@ namespace NativePrompt
                 Callback = callback;
             }
 
-            internal Action<BottomSheetResult> Callback { get; }
+            internal Action<BottomSheetResult> Callback { get; private set; }
+
+            internal override void ReleaseContent()
+            {
+                Callback = null;
+            }
         }
 
         private sealed class ToastRequest : PromptRequest
@@ -593,8 +803,14 @@ namespace NativePrompt
                 Callback = callback;
             }
 
-            internal ToastOptions Options { get; }
-            internal Action<ToastDismissReason> Callback { get; }
+            internal ToastOptions Options { get; private set; }
+            internal Action<ToastDismissReason> Callback { get; private set; }
+
+            internal override void ReleaseContent()
+            {
+                Options = null;
+                Callback = null;
+            }
         }
     }
 }

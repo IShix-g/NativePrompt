@@ -2,7 +2,8 @@
   "name": "NativePrompt.Sample.Tests.PlayMode",
   "rootNamespace": "NativePrompt.Samples.Tests",
   "references": [
-    "NativePrompt.Sample"
+    "NativePrompt.Sample",
+    "NativePrompt"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"
