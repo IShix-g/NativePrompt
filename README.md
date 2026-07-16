@@ -1,8 +1,12 @@
 # Native Prompt
 
+Native Prompt is a native UI plugin for Unity. It displays platform-native alerts,
+bottom sheets, and toasts on iOS and Android through one small C# API.
+
+![Native Prompt Top](docs/images/native-prompt-top.png)
+
 ## Table of Contents
 
-- [Overview](#overview)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -13,11 +17,6 @@
 - [Sample Scene](#sample-scene)
 - [Documentation](#documentation)
 - [License](#license)
-
-## Overview
-
-Native Prompt is a native UI plugin for Unity. It displays platform-native alerts,
-bottom sheets, and toasts on iOS and Android through one small C# API.
 
 ## Requirements
 
