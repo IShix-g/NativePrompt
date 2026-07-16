@@ -1,8 +1,8 @@
 # NativePrompt architecture
 
 NativePrompt separates its public C# contract, shared request coordination, and
-platform UI implementations. This document describes the implemented v0.1
-boundaries and ownership.
+platform UI implementations. This document describes their boundaries and
+ownership.
 
 ## Assembly and namespace boundaries
 
@@ -67,7 +67,7 @@ with `ToastDismissReason.Replaced`, then installs the new request. A manual dism
 travels through the handle to the coordinator; repeated dismiss requests are safe.
 
 Bottom sheet action completion and cancellation use the same callback-once and
-request-ID rules. v0.1 does not define a public queue-control API.
+request-ID rules. NativePrompt does not define a public queue-control API.
 
 ## Native callback contract
 
@@ -93,9 +93,3 @@ been consumed, and invokes it once. Platform strategies must not bypass this pat
 Native UI visual details remain platform-owned. Public results, queue behavior,
 replacement behavior, callback threading, and callback cardinality remain shared
 runtime responsibilities.
-
-## v0.1 exclusions
-
-The architecture does not include a Task API, `OOStrategy`, Android external UI
-library, Snackbar actions, arbitrary bottom sheet content, draggable or partial
-bottom sheets, alert input fields, or OS notification-center integration.

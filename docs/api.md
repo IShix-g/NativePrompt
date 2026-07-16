@@ -1,9 +1,9 @@
 # NativePrompt API
 
 The runtime API is in the `NativePrompt` namespace and the `NativePrompt`
-assembly. NativePrompt v0.1 uses callbacks; it does not expose a Task-based API.
-The shared runtime dispatches requests to the implemented iOS, Android, or Unity
-Editor strategy.
+assembly. NativePrompt uses callbacks and does not expose a Task-based API. The
+shared runtime dispatches requests to the implemented iOS, Android, or Unity Editor
+strategy.
 
 ## Alert
 
@@ -123,15 +123,6 @@ main thread.
 Android runtime UI does not depend on Material Components, Compose, or another
 external UI library. Unsupported platforms throw `PlatformNotSupportedException`
 at the facade; there is no out-of-scope fallback strategy.
-
-## Not included in v0.1
-
-- Task-based APIs
-- Alert text input
-- Bottom sheet custom views, icons, multiple selection, swipe, or partial/expanded states
-- Snackbar action buttons
-- Notification-center or notification-permission integration
-- iOS versions earlier than 13 or Android API levels earlier than 24
 
 See [Architecture](architecture.md) for the runtime ownership and native callback
 contract.

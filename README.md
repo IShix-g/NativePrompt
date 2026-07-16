@@ -44,24 +44,18 @@ NP.ShowAlert(
     result => UnityEngine.Debug.Log($"Alert result: {result}"));
 ```
 
-See the [Public API](Documentation~/api.md) for Bottom Sheet and Toast examples.
+See the [Public API](docs/api.md) for Bottom Sheet and Toast examples.
 
 ## Package ID
 
 `com.ishix.nativeprompt`
 
-## Status
-
-The Alert, Bottom Sheet, and Toast APIs, shared runtime coordination, and iOS,
-Android, and Unity Editor strategies are implemented for v0.1. See
-[Release verification](Documentation~/release-verification.md) for the automated
-test results and remaining platform-build verification tracked separately.
-
 ## Documentation
 
-- [Public API](Documentation~/api.md)
-- [Architecture](Documentation~/architecture.md)
-- [Release verification](Documentation~/release-verification.md)
+- [Documentation index](docs/index.md)
+- [Public API](docs/api.md)
+- [Architecture](docs/architecture.md)
+- [Release verification](docs/release-verification.md)
 
 ## UI Toolkit sample
 
