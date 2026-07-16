@@ -1,4 +1,4 @@
-name: Update Major Tag (V2)
+name: Update Major Tag (V1)
 
 on:
   workflow_dispatch:
@@ -10,8 +10,8 @@ on:
         required: false
 
 env:
-  TAG: v2
-  TARGET_VERSION: 2
+  TAG: v1
+  TARGET_VERSION: 1
 
 permissions:
   contents: write
