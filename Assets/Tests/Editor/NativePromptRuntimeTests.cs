@@ -67,6 +67,18 @@ namespace NativePrompt.Tests
                 Position = ToastPosition.Top
             });
 
+            NP.ShowLoading(new LoadingOptions
+            {
+                Message = "  Working  ",
+                BlocksInteraction = true,
+                ShowsBackground = true,
+                BackgroundColor = Color.blue,
+                BackgroundOpacity = 0.75f,
+                Position = LoadingPosition.TopLeft,
+                Size = LoadingSize.Large,
+                ShowDelaySeconds = 0.5f
+            });
+
             Assert.That(_strategy.Alerts[0].Options.Title, Is.EqualTo("Title"));
             Assert.That(_strategy.Alerts[0].Options.Content, Is.EqualTo("Content"));
             Assert.That(_strategy.Alerts[0].Options.YesButtonText, Is.Null);
@@ -87,6 +99,16 @@ namespace NativePrompt.Tests
             Assert.That(toast.AutoDismiss, Is.True);
             Assert.That(toast.DismissOnTap, Is.False);
             Assert.That(toast.Position, Is.EqualTo(ToastPosition.Top));
+
+            LoadingOptions loading = _strategy.Loadings[0].Options;
+            Assert.That(loading.Message, Is.EqualTo("Working"));
+            Assert.That(loading.BlocksInteraction, Is.True);
+            Assert.That(loading.ShowsBackground, Is.True);
+            Assert.That(loading.BackgroundColor, Is.EqualTo(Color.blue));
+            Assert.That(loading.BackgroundOpacity, Is.EqualTo(0.75f));
+            Assert.That(loading.Position, Is.EqualTo(LoadingPosition.TopLeft));
+            Assert.That(loading.Size, Is.EqualTo(LoadingSize.Large));
+            Assert.That(loading.ShowDelaySeconds, Is.EqualTo(0.5f));
         }
 
         [Test]
@@ -112,6 +134,175 @@ namespace NativePrompt.Tests
                 NP.ShowToast(new ToastOptions { Message = null }));
             Assert.Throws<ArgumentException>(() =>
                 NP.ShowToast(new ToastOptions { Message = "   " }));
+            Assert.Throws<ArgumentNullException>(() => NP.ShowLoading(null));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { BackgroundOpacity = -0.01f }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { BackgroundOpacity = 1.01f }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { BackgroundOpacity = float.NaN }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { BackgroundOpacity = float.PositiveInfinity }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { ShowDelaySeconds = -0.01f }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { ShowDelaySeconds = float.PositiveInfinity }));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                NP.ShowLoading(new LoadingOptions { Position = (LoadingPosition)999 }));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                NP.ShowLoading(new LoadingOptions { Size = (LoadingSize)999 }));
+        }
+
+        [Test]
+        public void Loading_NormalizesDefaultValuesAndWhitespaceMessage()
+        {
+            NP.ShowLoading(new LoadingOptions { Message = " \t " });
+
+            LoadingOptions options = _strategy.Loadings[0].Options;
+            Assert.That(options.BlocksInteraction, Is.False);
+            Assert.That(options.ShowsBackground, Is.False);
+            Assert.That(options.BackgroundColor, Is.EqualTo(Color.white));
+            Assert.That(options.BackgroundOpacity, Is.EqualTo(0.5f));
+            Assert.That(options.Position, Is.EqualTo(LoadingPosition.BottomRight));
+            Assert.That(options.Size, Is.EqualTo(LoadingSize.Medium));
+            Assert.That(options.Message, Is.Null);
+            Assert.That(options.ShowDelaySeconds, Is.EqualTo(0.25f));
+        }
+
+        [Test]
+        public void LoadingHandle_DismissAndDisposeAreIdempotent()
+        {
+            LoadingHandle dismissed = NP.ShowLoading(new LoadingOptions());
+            dismissed.Dismiss();
+            dismissed.Dismiss();
+            dismissed.Dispose();
+
+            LoadingHandle disposed = NP.ShowLoading(new LoadingOptions());
+            disposed.Dispose();
+            disposed.Dispose();
+            disposed.Dismiss();
+
+            Assert.That(_strategy.DismissedLoadingIds, Has.Count.EqualTo(2));
+            Assert.That(_strategy.DismissedLoadingIds[0], Is.EqualTo(dismissed.RequestId));
+            Assert.That(_strategy.DismissedLoadingIds[1], Is.EqualTo(disposed.RequestId));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+            Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void Loading_LatestRequestWinsAndRestoresPreviousOptions()
+        {
+            LoadingHandle first = NP.ShowLoading(new LoadingOptions
+            {
+                Message = "First",
+                Position = LoadingPosition.TopLeft,
+                Tag = "first-tag",
+                GroupId = "loading-group"
+            });
+            LoadingHandle second = NP.ShowLoading(new LoadingOptions
+            {
+                Message = "Second",
+                Position = LoadingPosition.Center
+            });
+
+            second.Dismiss();
+
+            Assert.That(_strategy.Loadings, Has.Count.EqualTo(3));
+            Assert.That(_strategy.Loadings[0].RequestId, Is.EqualTo(first.RequestId));
+            Assert.That(_strategy.Loadings[1].RequestId, Is.EqualTo(second.RequestId));
+            Assert.That(_strategy.Loadings[2].RequestId, Is.EqualTo(first.RequestId));
+            Assert.That(_strategy.Loadings[2].Options.Message, Is.EqualTo("First"));
+            Assert.That(_strategy.Loadings[2].Options.Position, Is.EqualTo(LoadingPosition.TopLeft));
+            Assert.That(first.Tag, Is.EqualTo("first-tag"));
+            Assert.That(first.GroupId, Is.EqualTo("loading-group"));
+
+            first.Dispose();
+            Assert.That(_strategy.DismissedLoadingIds, Is.EqualTo(new[] { first.RequestId }));
+        }
+
+        [Test]
+        public void Loading_EndingOlderRequestDoesNotAffectLatestRequest()
+        {
+            LoadingHandle first = NP.ShowLoading(new LoadingOptions { Message = "First" });
+            LoadingHandle second = NP.ShowLoading(new LoadingOptions { Message = "Second" });
+
+            first.Dispose();
+
+            Assert.That(_strategy.Loadings, Has.Count.EqualTo(2));
+            Assert.That(_strategy.DismissedLoadingIds, Is.Empty);
+            Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.EqualTo(1));
+
+            second.Dismiss();
+            Assert.That(_strategy.DismissedLoadingIds, Is.EqualTo(new[] { second.RequestId }));
+        }
+
+        [Test]
+        public void Loading_ShowFailureCleansUpAndRestoresPreviousRequest()
+        {
+            LoadingHandle first = NP.ShowLoading(new LoadingOptions { Message = "First" });
+            _strategy.NextShowLoadingException = new InvalidOperationException("show failure");
+
+            Assert.Throws<InvalidOperationException>(() =>
+                NP.ShowLoading(new LoadingOptions { Message = "Second" }));
+
+            Assert.That(_strategy.Loadings, Has.Count.EqualTo(3));
+            Assert.That(_strategy.Loadings[2].RequestId, Is.EqualTo(first.RequestId));
+            Assert.That(_strategy.Loadings[2].Options.Message, Is.EqualTo("First"));
+            Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.EqualTo(1));
+
+            first.Dispose();
+            Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.Zero);
+
+            _strategy.NextShowLoadingException = new InvalidOperationException("first failure");
+            Assert.Throws<InvalidOperationException>(() =>
+                NP.ShowLoading(new LoadingOptions { Message = "Only" }));
+            Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.Zero);
+            Assert.That(_strategy.DismissedLoadingIds, Has.Count.EqualTo(2));
+        }
+
+        [UnityTest]
+        public IEnumerator EditorLoading_LogsOnlyAfterUnscaledDelay()
+        {
+            NativePromptRuntime.SetForTesting(new EditorNativePromptStrategy(), _dispatcher);
+            LogAssert.Expect(
+                LogType.Log,
+                new Regex("NativePrompt Loading: position=Center, size=Small, message=Working"));
+
+            NP.ShowLoading(new LoadingOptions
+            {
+                Message = "Working",
+                Position = LoadingPosition.Center,
+                Size = LoadingSize.Small,
+                ShowDelaySeconds = 0.01f
+            });
+
+            double deadline = UnityEditor.EditorApplication.timeSinceStartup + 0.05;
+            while (UnityEditor.EditorApplication.timeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator EditorLoading_DismissedDuringDelayDoesNotLog()
+        {
+            NativePromptRuntime.SetForTesting(new EditorNativePromptStrategy(), _dispatcher);
+            LoadingHandle handle = NP.ShowLoading(new LoadingOptions
+            {
+                Message = "Do not log",
+                ShowDelaySeconds = 0.02f
+            });
+
+            handle.Dismiss();
+            double deadline = UnityEditor.EditorApplication.timeSinceStartup + 0.05;
+            while (UnityEditor.EditorApplication.timeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+
+            LogAssert.NoUnexpectedReceived();
         }
 
         [Test]
@@ -663,10 +854,12 @@ namespace NativePrompt.Tests
                 ToastHandle toast = NP.ShowToast(
                     new ToastOptions { Message = "Toast" },
                     _ => callbackCount++);
+                LoadingHandle loading = NP.ShowLoading(new LoadingOptions());
 
                 alert.AddTo(cancellation.Token);
                 sheet.AddTo(cancellation.Token);
                 toast.AddTo(cancellation.Token);
+                loading.AddTo(cancellation.Token);
                 cancellation.Cancel();
 
                 Assert.That(_strategy.DismissedAlertIds, Is.EqualTo(new[] { alert.RequestId }));
@@ -674,9 +867,13 @@ namespace NativePrompt.Tests
                     _strategy.DismissedBottomSheetIds,
                     Is.EqualTo(new[] { sheet.RequestId }));
                 Assert.That(_strategy.DismissedToastIds, Is.EqualTo(new[] { toast.RequestId }));
+                Assert.That(
+                    _strategy.DismissedLoadingIds,
+                    Is.EqualTo(new[] { loading.RequestId }));
                 Assert.That(callbackCount, Is.Zero);
                 Assert.That(eventCount, Is.Zero);
                 Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+                Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.Zero);
 
                 NativePromptCallbackReceiver.AlertCompleted(alert.RequestId, AlertResult.Yes);
                 NativePromptCallbackReceiver.BottomSheetCancelled(sheet.RequestId);
@@ -686,6 +883,7 @@ namespace NativePrompt.Tests
                 alert.Dismiss();
                 sheet.Dispose();
                 toast.Dispose();
+                loading.Dismiss();
 
                 Assert.That(callbackCount, Is.Zero);
                 Assert.That(eventCount, Is.Zero);
@@ -1139,12 +1337,14 @@ namespace NativePrompt.Tests
                 .AddTo(owner);
             NP.ShowAlert(new AlertOptions { Content = "Queued" }, _ => callbackCount++);
             NP.ShowToast(new ToastOptions { Message = "Toast" }, _ => callbackCount++);
+            LoadingHandle loading = NP.ShowLoading(new LoadingOptions());
 
             string alertId = _strategy.Alerts[0].RequestId;
             string toastId = _strategy.Toasts[0].RequestId;
             NativePromptCallbackReceiver.AlertCompleted(alertId, AlertResult.Closed);
 
             NativePromptRuntime.Reset();
+            loading.Dismiss();
             UnityEngine.Object.DestroyImmediate(ownerObject);
             NativePromptCallbackReceiver.ToastDismissed(toastId, ToastDismissReason.TimedOut);
             queuedDispatcher.Drain();
@@ -1154,6 +1354,7 @@ namespace NativePrompt.Tests
             Assert.That(_strategy.DismissedAlertIds, Is.Empty);
             Assert.That(_strategy.ResetCount, Is.EqualTo(1));
             Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+            Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.Zero);
         }
 
         private static BottomSheetOptions CreateBottomSheet(string id)
@@ -1175,17 +1376,23 @@ namespace NativePrompt.Tests
 
             internal List<ToastCall> Toasts { get; } = new List<ToastCall>();
 
+            internal List<LoadingCall> Loadings { get; } = new List<LoadingCall>();
+
             internal List<string> DismissedToastIds { get; } = new List<string>();
 
             internal List<string> DismissedAlertIds { get; } = new List<string>();
 
             internal List<string> DismissedBottomSheetIds { get; } = new List<string>();
 
+            internal List<string> DismissedLoadingIds { get; } = new List<string>();
+
             internal int ResetCount { get; private set; }
 
             internal Exception DismissAlertException { get; set; }
 
             internal Action OnDismissAlert { get; set; }
+
+            internal Exception NextShowLoadingException { get; set; }
 
             internal void ClearResetCount()
             {
@@ -1225,6 +1432,22 @@ namespace NativePrompt.Tests
             public void DismissToast(string requestId)
             {
                 DismissedToastIds.Add(requestId);
+            }
+
+            public void ShowLoading(string requestId, LoadingOptions options)
+            {
+                Loadings.Add(new LoadingCall(requestId, options));
+                Exception exception = NextShowLoadingException;
+                NextShowLoadingException = null;
+                if (exception != null)
+                {
+                    throw exception;
+                }
+            }
+
+            public void DismissLoading(string requestId)
+            {
+                DismissedLoadingIds.Add(requestId);
             }
 
             public void Reset()
@@ -1298,6 +1521,19 @@ namespace NativePrompt.Tests
             internal string RequestId { get; }
 
             internal ToastOptions Options { get; }
+        }
+
+        private sealed class LoadingCall
+        {
+            internal LoadingCall(string requestId, LoadingOptions options)
+            {
+                RequestId = requestId;
+                Options = options;
+            }
+
+            internal string RequestId { get; }
+
+            internal LoadingOptions Options { get; }
         }
     }
 

@@ -3,7 +3,7 @@
 # Native Prompt
 
 Native Prompt is a native UI plugin for Unity. It displays platform-native alerts,
-bottom sheets, and toasts on iOS and Android through one small C# API.
+bottom sheets, toasts, and loading overlays on iOS and Android through one small C# API.
 
 ![Native Prompt Top](docs/images/native-prompt-top.png)
 
@@ -15,6 +15,7 @@ bottom sheets, and toasts on iOS and Android through one small C# API.
 - [Native Alert](#native-alert)
 - [Native Bottom Sheet](#native-bottom-sheet)
 - [Native Toast](#native-toast)
+- [Native Loading](#native-loading)
 - [Prompt Handles & Lifecycle Events](#prompt-handles--lifecycle-events)
 - [Sample Scene](#sample-scene)
 - [Documentation](#documentation)
@@ -310,14 +311,67 @@ public sealed class NativeToastExample : MonoBehaviour
   the Console while preserving the completion callback contract. Check an iOS or
   Android build for the native appearance.
 
+## Native Loading
+
+Use a loading overlay for work that has no native completion result. Keep the
+returned handle and end the request from every success, failure, and cancellation
+path.
+
+```csharp
+using NativePrompt;
+using UnityEngine;
+
+public sealed class NativeLoadingExample : MonoBehaviour
+{
+    private LoadingHandle _loading;
+
+    public void BeginPurchase()
+    {
+        _loading = NP.ShowLoading(new LoadingOptions
+        {
+            BlocksInteraction = true,
+            ShowsBackground = true,
+            BackgroundColor = Color.white,
+            BackgroundOpacity = 0.5f,
+            Position = LoadingPosition.Center,
+            Size = LoadingSize.Medium,
+            Message = "Processing...",
+            ShowDelaySeconds = 0.25f,
+            Tag = "purchase"
+        }).AddTo(this);
+    }
+
+    public void EndPurchase()
+    {
+        _loading?.Dismiss();
+        _loading = null;
+    }
+}
+```
+
+`ShowsBackground` and `BlocksInteraction` are independent. Interaction blocking
+begins immediately, while the background, spinner, and optional message appear
+together after `ShowDelaySeconds`. Ending a request during the delay prevents its
+visual elements from appearing. Five safe-area-aware positions and three native
+spinner sizes are available.
+
+Multiple loading handles may coexist. The newest active handle supplies the visible
+options; ending it restores the next-newest request. The native layer keeps only one
+loading view hierarchy. `Dismiss()` and `Dispose()` both end only their own loading
+request and are idempotent. Loading intentionally has no completion callback or
+lifecycle event.
+
 ## Prompt Handles & Lifecycle Events
 
 Every `Show*()` method returns a prompt-specific handle: `AlertHandle`,
-`BottomSheetHandle`, or `ToastHandle`. All three implement `IPromptHandle` and
+`BottomSheetHandle`, `ToastHandle`, or `LoadingHandle`. All four implement `IPromptHandle` and
 `IDisposable`. Calling `Dismiss()` closes the prompt and reports its normal
 type-specific dismissal result to the individual callback and static completion
 event. Calling `Dispose()` silently removes the prompt without either notification.
 Both operations are idempotent.
+
+Loading has no result notification, so `LoadingHandle.Dismiss()` and `Dispose()`
+have the same request-scoped effect.
 
 Use `AddTo(this)` when a prompt belongs to a `MonoBehaviour`. It returns the same
 handle and silently disposes the prompt when that component or its GameObject is
@@ -404,8 +458,8 @@ enter Play Mode.
 
 When working directly in this repository, open
 `Assets/Samples/NativePrompt/NativePromptSample.unity`. Its centered 540 x 960
-viewport includes controls for Alert, Bottom Sheet, and Toast configurations,
-including manual Toast dismissal, and displays the latest callback result.
+viewport includes controls for Alert, Bottom Sheet, Toast, and Loading configurations,
+including all four Loading background/input combinations, and displays the latest result.
 
 Use the sample in the Unity Editor to check API flows and on iOS or Android to
 check native appearance. PlayMode tests are in `Assets/Tests/PlayMode`, and plugin

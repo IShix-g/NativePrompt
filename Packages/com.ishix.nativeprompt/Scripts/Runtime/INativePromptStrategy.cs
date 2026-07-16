@@ -14,6 +14,10 @@ namespace NativePrompt
 
         void DismissToast(string requestId);
 
+        void ShowLoading(string requestId, LoadingOptions options);
+
+        void DismissLoading(string requestId);
+
         void Reset();
     }
 }

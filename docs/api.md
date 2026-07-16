@@ -105,9 +105,51 @@ Calling `Dismiss()` more than once is safe. Only one toast is visible; showing a
 toast replaces the current one and completes the old callback with `Replaced`.
 Toast positions account for the platform safe area.
 
+## Loading
+
+Use `NP.ShowLoading(LoadingOptions)` to start a request-scoped native loading
+overlay. The API returns immediately with a `LoadingHandle`; loading has no callback,
+completion result, or static lifecycle event.
+
+```csharp
+LoadingHandle loading = NP.ShowLoading(new LoadingOptions
+{
+    BlocksInteraction = true,
+    ShowsBackground = true,
+    BackgroundColor = Color.white,
+    BackgroundOpacity = 0.5f,
+    Position = LoadingPosition.BottomRight,
+    Size = LoadingSize.Medium,
+    Message = "Processing...",
+    ShowDelaySeconds = 0.25f,
+    Tag = "purchase",
+    GroupId = "checkout"
+});
+
+// Safe to call repeatedly. Dispose() has the same effect for Loading.
+loading.Dismiss();
+```
+
+Defaults are `BlocksInteraction = false`, `ShowsBackground = false`, a white
+background with `0.5` opacity, `BottomRight`, `Medium`, no message, and a `0.25`
+second visual delay. `LoadingPosition` supports `Center`, `TopLeft`, `TopRight`,
+`BottomLeft`, and `BottomRight`; `LoadingSize` supports `Small`, `Medium`, and
+`Large`. Whitespace-only messages are omitted.
+
+Background visibility and pointer-input blocking are independent. If blocking is
+enabled, a transparent blocker starts immediately. The background, spinner, and
+message become visible together after the configured delay, using an OS monotonic
+clock rather than Unity `Time.timeScale`. Ending the request first cancels visual
+presentation and removes the blocker.
+
+Each call creates a distinct managed request, but the native implementation owns
+one loading hierarchy. The newest active request controls the hierarchy. Ending an
+older request leaves the newest untouched; ending the newest reapplies the
+next-newest active request. Loading is not dismissed on `OnApplicationPause`.
+
 ## Handles and identity metadata
 
-`AlertHandle`, `BottomSheetHandle`, and `ToastHandle` implement `IPromptHandle` and
+`AlertHandle`, `BottomSheetHandle`, `ToastHandle`, and `LoadingHandle` implement `IPromptHandle` and
 `IDisposable`. Every handle exposes a library-generated `RequestId`, the optional
 `Tag` and `GroupId` supplied in its options, and two idempotent completion paths:
 
@@ -115,6 +157,9 @@ Toast positions account for the platform safe area.
   result to the individual callback and static completion event.
 - `Dispose()` silently removes the prompt or waiting request. It does not invoke
   the individual callback or static completion event.
+
+For `LoadingHandle`, both methods simply end that handle's request because Loading
+has no callback or completion event.
 
 ```csharp
 AlertOptions options = new AlertOptions
@@ -204,6 +249,8 @@ native request:
 - A bottom sheet must contain one to three non-null actions. Action IDs and text must
   contain non-whitespace text, and IDs must be unique within the sheet.
 - `ToastOptions.Duration` must be greater than zero when `AutoDismiss` is enabled.
+- `LoadingOptions.BackgroundOpacity` must be finite and between zero and one.
+- `LoadingOptions.ShowDelaySeconds` must be finite and zero or greater.
 - Invalid required text, action collections, action values, or duration values cause
   an `ArgumentException`; null top-level options cause `ArgumentNullException`.
 
@@ -217,6 +264,7 @@ main thread.
 | Alert | UIKit `UIAlertController` (alert style) | Android SDK `AlertDialog` (not cancelled by backdrop or Back) | Non-blocking utility window |
 | Bottom sheet | UIKit action sheet | Android SDK `Dialog` and standard views | Non-blocking utility window |
 | Toast | UIKit view overlay | Android standard-view overlay | Logs the message while preserving the callback contract |
+| Loading | Existing-window `UIView`, `UIActivityIndicatorView`, optional `UILabel` | Existing-activity `FrameLayout`, indeterminate `ProgressBar`, optional `TextView` | Logs when visual presentation begins |
 
 Android runtime UI does not depend on Material Components, Compose, or another
 external UI library. Unsupported platforms throw `PlatformNotSupportedException`

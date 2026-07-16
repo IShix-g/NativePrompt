@@ -6,6 +6,13 @@ All notable changes to this package are documented in this file.
 
 ### Added
 
+- `NP.ShowLoading`, `LoadingOptions`, `LoadingHandle`, five safe-area-aware
+  positions, three native spinner sizes, optional message/background, independent
+  interaction blocking, and unscaled visual delay on iOS, Android, and Editor.
+- Request-ID-based Loading ownership with newest-options presentation, restoration
+  of the next-newest active request, reset cleanup, and EditMode coverage.
+- Loading sample controls plus Unity Test Runner and device verification guidance.
+
 - `AlertHandle`, `BottomSheetHandle`, and the shared `IPromptHandle` contract, with
   request-scoped, idempotent dismissal on iOS, Android, and the Unity Editor.
 - Unique public `RequestId` values and caller-defined `Tag` / `GroupId` metadata on

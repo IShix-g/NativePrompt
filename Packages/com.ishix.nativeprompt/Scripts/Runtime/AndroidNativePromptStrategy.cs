@@ -10,6 +10,7 @@ namespace NativePrompt
         private const string NativeClassName = "com.ishix.nativeprompt.NativeBottomSheet";
         private const string NativeToastClassName = "com.ishix.nativeprompt.NativeToast";
         private const string NativeAlertClassName = "com.ishix.nativeprompt.NativeAlert";
+        private const string NativeLoadingClassName = "com.ishix.nativeprompt.NativeLoading";
         private readonly object _gate = new object();
         private readonly Dictionary<string, BottomSheetCallbackProxy> _bottomSheetCallbacks =
             new Dictionary<string, BottomSheetCallbackProxy>(StringComparer.Ordinal);
@@ -143,6 +144,34 @@ namespace NativePrompt
             }
         }
 
+        public void ShowLoading(string requestId, LoadingOptions options)
+        {
+            using (var nativeClass = new AndroidJavaClass(NativeLoadingClassName))
+            {
+                nativeClass.CallStatic(
+                    "show",
+                    requestId,
+                    options.Message,
+                    options.BlocksInteraction,
+                    options.ShowsBackground,
+                    options.BackgroundColor.r,
+                    options.BackgroundColor.g,
+                    options.BackgroundColor.b,
+                    options.BackgroundOpacity,
+                    (int)options.Position,
+                    (int)options.Size,
+                    options.ShowDelaySeconds);
+            }
+        }
+
+        public void DismissLoading(string requestId)
+        {
+            using (var nativeClass = new AndroidJavaClass(NativeLoadingClassName))
+            {
+                nativeClass.CallStatic("dismiss", requestId);
+            }
+        }
+
         public void Reset()
         {
             lock (_gate)
@@ -163,6 +192,11 @@ namespace NativePrompt
             }
 
             using (var nativeClass = new AndroidJavaClass(NativeAlertClassName))
+            {
+                nativeClass.CallStatic("reset");
+            }
+
+            using (var nativeClass = new AndroidJavaClass(NativeLoadingClassName))
             {
                 nativeClass.CallStatic("reset");
             }

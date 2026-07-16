@@ -111,6 +111,53 @@ namespace NativePrompt
             };
         }
 
+        internal static LoadingOptions Normalize(LoadingOptions options)
+        {
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
+            if (float.IsNaN(options.BackgroundOpacity) ||
+                float.IsInfinity(options.BackgroundOpacity) ||
+                options.BackgroundOpacity < 0f || options.BackgroundOpacity > 1f)
+            {
+                throw new ArgumentException(
+                    "Loading background opacity must be finite and between zero and one.",
+                    nameof(options.BackgroundOpacity));
+            }
+            if (float.IsNaN(options.ShowDelaySeconds) ||
+                float.IsInfinity(options.ShowDelaySeconds) ||
+                options.ShowDelaySeconds < 0f)
+            {
+                throw new ArgumentException(
+                    "Loading show delay must be finite and zero or greater.",
+                    nameof(options.ShowDelaySeconds));
+            }
+            if (!Enum.IsDefined(typeof(LoadingPosition), options.Position))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options.Position));
+            }
+            if (!Enum.IsDefined(typeof(LoadingSize), options.Size))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options.Size));
+            }
+
+            return new LoadingOptions
+            {
+                BlocksInteraction = options.BlocksInteraction,
+                ShowsBackground = options.ShowsBackground,
+                BackgroundColor = options.BackgroundColor,
+                BackgroundOpacity = options.BackgroundOpacity,
+                Position = options.Position,
+                Size = options.Size,
+                Message = OptionalText(options.Message),
+                ShowDelaySeconds = options.ShowDelaySeconds,
+                Tag = options.Tag,
+                GroupId = options.GroupId
+            };
+        }
+
         private static string OptionalText(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -1,10 +1,13 @@
 # NativePrompt UI Toolkit Sample
 
 Open `NativePromptSample.unity` and enter Play Mode. The centered 540 × 960
-logical viewport exposes every Alert, Bottom Sheet, and Toast scenario required
+logical viewport exposes representative Alert, Bottom Sheet, Toast, and Loading scenarios
 for manual Editor or device verification. The latest callback result appears in
 the `LATEST RESULT` panel.
 
-The manual toast remains visible until `Dismiss manual` is selected. Native UI
+The Loading controls cover all four background/input-block combinations, multiple
+positions and sizes, messages, and immediate/delayed presentation. Select
+`Dismiss loading` to end the active request. The manual toast remains visible until
+`Dismiss manual` is selected. Native UI
 appearance is intentionally verified on a device; the PlayMode tests cover scene
 loading, UI wiring, viewport ratio, and result updates.

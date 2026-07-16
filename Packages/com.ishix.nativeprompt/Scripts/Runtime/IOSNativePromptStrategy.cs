@@ -75,11 +75,33 @@ namespace NativePrompt
             NativePrompt_DismissToast(requestId);
         }
 
+        public void ShowLoading(string requestId, LoadingOptions options)
+        {
+            NativePrompt_ShowLoading(
+                requestId,
+                options.Message,
+                options.BlocksInteraction,
+                options.ShowsBackground,
+                options.BackgroundColor.r,
+                options.BackgroundColor.g,
+                options.BackgroundColor.b,
+                options.BackgroundOpacity,
+                (int)options.Position,
+                (int)options.Size,
+                options.ShowDelaySeconds);
+        }
+
+        public void DismissLoading(string requestId)
+        {
+            NativePrompt_DismissLoading(requestId);
+        }
+
         public void Reset()
         {
             NativePrompt_ResetBottomSheets();
             NativePrompt_ResetToasts();
             NativePrompt_ResetAlerts();
+            NativePrompt_ResetLoading();
         }
 
         [AOT.MonoPInvokeCallback(typeof(ActionSelectedCallback))]
@@ -178,6 +200,26 @@ namespace NativePrompt
 
         [DllImport("__Internal")]
         private static extern void NativePrompt_ResetAlerts();
+
+        [DllImport("__Internal")]
+        private static extern void NativePrompt_ShowLoading(
+            string requestId,
+            string message,
+            [MarshalAs(UnmanagedType.I1)] bool blocksInteraction,
+            [MarshalAs(UnmanagedType.I1)] bool showsBackground,
+            float backgroundRed,
+            float backgroundGreen,
+            float backgroundBlue,
+            float backgroundOpacity,
+            int position,
+            int size,
+            float showDelaySeconds);
+
+        [DllImport("__Internal")]
+        private static extern void NativePrompt_DismissLoading(string requestId);
+
+        [DllImport("__Internal")]
+        private static extern void NativePrompt_ResetLoading();
 
         private static void ThrowNotImplemented()
         {

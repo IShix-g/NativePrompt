@@ -45,6 +45,10 @@ namespace NativePrompt.Samples.Tests
             Assert.That(controller.GetBoundApi("sheet-destructive-button"), Is.EqualTo("NP.ShowBottomSheet"));
             Assert.That(controller.GetBoundApi("toast-manual-button"), Is.EqualTo("NP.ShowToast"));
             Assert.That(controller.GetBoundApi("toast-dismiss-button"), Is.EqualTo("ToastHandle.Dismiss"));
+            Assert.That(controller.GetBoundApi("loading-spinner-button"), Is.EqualTo("NP.ShowLoading"));
+            Assert.That(
+                controller.GetBoundApi("loading-dismiss-button"),
+                Is.EqualTo("LoadingHandle.Dismiss"));
             yield return null;
         }
 
@@ -85,6 +89,9 @@ namespace NativePrompt.Samples.Tests
             Button toastAuto = root.Q<Button>("toast-auto-button");
             Button toastManual = root.Q<Button>("toast-manual-button");
             Button toastDismiss = root.Q<Button>("toast-dismiss-button");
+            Button loadingSpinner = root.Q<Button>("loading-spinner-button");
+            Button loadingBlockBackground = root.Q<Button>("loading-block-background-button");
+            Button loadingDismiss = root.Q<Button>("loading-dismiss-button");
             VisualElement resultPanel = root.Q<VisualElement>("result-panel");
 
             Assert.That(alertContent.worldBound.y, Is.EqualTo(alertYes.worldBound.y).Within(0.5f));
@@ -92,7 +99,11 @@ namespace NativePrompt.Samples.Tests
             Assert.That(alertFull.worldBound.yMax, Is.LessThan(sheetStandard.worldBound.yMin));
             Assert.That(sheetDisabled.worldBound.yMax, Is.LessThan(toastAuto.worldBound.yMin));
             Assert.That(toastManual.worldBound.y, Is.EqualTo(toastDismiss.worldBound.y).Within(0.5f));
-            Assert.That(toastDismiss.worldBound.yMax, Is.LessThan(resultPanel.worldBound.yMin));
+            Assert.That(toastDismiss.worldBound.yMax, Is.LessThan(loadingSpinner.worldBound.yMin));
+            Assert.That(
+                loadingBlockBackground.worldBound.yMax,
+                Is.LessThan(loadingDismiss.worldBound.yMin));
+            Assert.That(loadingDismiss.worldBound.yMax, Is.LessThan(resultPanel.worldBound.yMin));
         }
 
         [UnityTest]

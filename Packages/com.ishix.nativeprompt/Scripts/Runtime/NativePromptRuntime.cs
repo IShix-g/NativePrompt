@@ -27,6 +27,11 @@ namespace NativePrompt
             return GetCoordinator().ShowToast(options, onDismissed);
         }
 
+        internal static LoadingHandle ShowLoading(LoadingOptions options)
+        {
+            return GetCoordinator().ShowLoading(options);
+        }
+
         internal static void ReceiveAlert(string requestId, AlertResult result)
         {
             GetCurrentCoordinator()?.ReceiveAlert(requestId, result);
@@ -91,6 +96,9 @@ namespace NativePrompt
 
         internal static int PendingCallbackCountForTesting =>
             GetCurrentCoordinator()?.PendingCallbackCount ?? 0;
+
+        internal static int ActiveLoadingCountForTesting =>
+            GetCurrentCoordinator()?.ActiveLoadingCount ?? 0;
 
         private static NativePromptCoordinator GetCoordinator()
         {

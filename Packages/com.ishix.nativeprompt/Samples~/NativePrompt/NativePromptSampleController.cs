@@ -24,7 +24,12 @@ namespace NativePrompt.Samples
             "toast-auto-button",
             "toast-tap-button",
             "toast-manual-button",
-            "toast-dismiss-button"
+            "toast-dismiss-button",
+            "loading-spinner-button",
+            "loading-background-button",
+            "loading-block-button",
+            "loading-block-background-button",
+            "loading-dismiss-button"
         };
 
         private readonly Dictionary<string, string> _boundApis = new Dictionary<string, string>();
@@ -33,6 +38,7 @@ namespace NativePrompt.Samples
         private VisualElement _logicalViewport;
         private Label _resultLabel;
         private ToastHandle _manualToast;
+        private LoadingHandle _loading;
 
         public IReadOnlyDictionary<string, string> BoundApis => _boundApis;
 
@@ -74,6 +80,8 @@ namespace NativePrompt.Samples
             _boundApis.Clear();
             _actions.Clear();
             _manualToast = null;
+            _loading?.Dispose();
+            _loading = null;
         }
 
         public string GetBoundApi(string buttonName)
@@ -102,6 +110,14 @@ namespace NativePrompt.Samples
             Bind("toast-tap-button", "NP.ShowToast", ShowTapToast);
             Bind("toast-manual-button", "NP.ShowToast", ShowManualToast);
             Bind("toast-dismiss-button", "ToastHandle.Dismiss", DismissManualToast);
+            Bind("loading-spinner-button", "NP.ShowLoading", ShowSpinnerLoading);
+            Bind("loading-background-button", "NP.ShowLoading", ShowBackgroundLoading);
+            Bind("loading-block-button", "NP.ShowLoading", ShowBlockingLoading);
+            Bind(
+                "loading-block-background-button",
+                "NP.ShowLoading",
+                ShowBlockingBackgroundLoading);
+            Bind("loading-dismiss-button", "LoadingHandle.Dismiss", DismissLoading);
         }
 
         private void Bind(string buttonName, string api, Action action)
@@ -266,6 +282,77 @@ namespace NativePrompt.Samples
             }
 
             _manualToast.Dismiss();
+        }
+
+        private void ShowSpinnerLoading()
+        {
+            ShowLoading(new LoadingOptions
+            {
+                Position = LoadingPosition.Center,
+                Size = LoadingSize.Small,
+                ShowDelaySeconds = 0f
+            }, "Loading: spinner only, pass-through");
+        }
+
+        private void ShowBackgroundLoading()
+        {
+            ShowLoading(new LoadingOptions
+            {
+                ShowsBackground = true,
+                BackgroundColor = new Color(0.85f, 0.93f, 1f),
+                BackgroundOpacity = 0.65f,
+                Position = LoadingPosition.TopLeft,
+                Size = LoadingSize.Medium,
+                Message = "Loading with pass-through background",
+                ShowDelaySeconds = 0.25f
+            }, "Loading: background, pass-through");
+        }
+
+        private void ShowBlockingLoading()
+        {
+            ShowLoading(new LoadingOptions
+            {
+                BlocksInteraction = true,
+                Position = LoadingPosition.BottomLeft,
+                Size = LoadingSize.Large,
+                Message = "Input blocked immediately",
+                ShowDelaySeconds = 1f
+            }, "Loading: invisible blocker, 1s visual delay");
+        }
+
+        private void ShowBlockingBackgroundLoading()
+        {
+            ShowLoading(new LoadingOptions
+            {
+                BlocksInteraction = true,
+                ShowsBackground = true,
+                BackgroundColor = Color.white,
+                BackgroundOpacity = 0.5f,
+                Position = LoadingPosition.BottomRight,
+                Size = LoadingSize.Medium,
+                Message = "Processing...",
+                ShowDelaySeconds = 0.25f
+            }, "Loading: background and blocker");
+        }
+
+        private void ShowLoading(LoadingOptions options, string result)
+        {
+            _loading?.Dismiss();
+            _loading = NP.ShowLoading(options).AddTo(this);
+            SetResult(result);
+        }
+
+        private void DismissLoading()
+        {
+            if (_loading == null)
+            {
+                SetResult("Loading: no request is active");
+                return;
+            }
+
+            _loading.Dismiss();
+            _loading = null;
+            SetResult("Loading: dismissed");
         }
 
         private void SetResult(string value)

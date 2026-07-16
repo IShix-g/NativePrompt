@@ -8,13 +8,13 @@
 .logical-viewport {
     width: 540px;
     height: 960px;
-    padding: 40px 48px;
+    padding: 30px 48px;
     background-color: rgb(248, 250, 252);
     color: rgb(15, 23, 42);
 }
 
 .header {
-    height: 104px;
+    height: 76px;
     flex-shrink: 0;
     justify-content: center;
 }
@@ -33,7 +33,7 @@
 
 .section {
     flex-shrink: 0;
-    margin-top: 16px;
+    margin-top: 10px;
 }
 
 .section-title {
@@ -53,11 +53,11 @@
     width: 48%;
     min-width: 0;
     max-width: none;
-    height: 52px;
+    height: 42px;
     flex-shrink: 0;
     margin-top: 0;
     margin-right: 0;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     margin-left: 0;
     padding-right: 0;
     padding-left: 0;
@@ -113,9 +113,9 @@
 
 .result-panel {
     flex-grow: 1;
-    min-height: 112px;
-    margin-top: 18px;
-    padding: 18px;
+    min-height: 80px;
+    margin-top: 12px;
+    padding: 12px;
     border-radius: 16px;
     border-width: 1px;
     border-color: rgb(203, 213, 225);
@@ -129,8 +129,8 @@
 }
 
 .result-value {
-    margin-top: 10px;
-    font-size: 20px;
+    margin-top: 6px;
+    font-size: 18px;
     white-space: normal;
     color: rgb(15, 23, 42);
 }

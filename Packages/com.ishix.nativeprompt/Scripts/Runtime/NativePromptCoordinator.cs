@@ -14,6 +14,7 @@ namespace NativePrompt
             new Dictionary<string, BottomSheetRequest>(StringComparer.Ordinal);
         private readonly HashSet<PromptRequest> _pendingDeliveries =
             new HashSet<PromptRequest>();
+        private readonly List<LoadingRequest> _loadings = new List<LoadingRequest>();
         private AlertRequest _activeAlert;
         private ToastRequest _activeToast;
 
@@ -36,6 +37,17 @@ namespace NativePrompt
                         _bottomSheets.Count +
                         (_activeToast == null ? 0 : 1) +
                         _pendingDeliveries.Count;
+                }
+            }
+        }
+
+        internal int ActiveLoadingCount
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _loadings.Count;
                 }
             }
         }
@@ -160,6 +172,53 @@ namespace NativePrompt
             }
 
             return new ToastHandle(
+                request.RequestId,
+                request.Tag,
+                request.GroupId,
+                lifetime);
+        }
+
+        internal LoadingHandle ShowLoading(LoadingOptions options)
+        {
+            var request = new LoadingRequest(NextRequestId("loading"), options);
+            var lifetime = new PromptHandleLifetime(
+                () => EndLoading(request),
+                () => EndLoading(request));
+            request.Lifetime = lifetime;
+            lock (_gate)
+            {
+                _loadings.Add(request);
+            }
+
+            try
+            {
+                _strategy.ShowLoading(request.RequestId, request.Options);
+            }
+            catch
+            {
+                LoadingRequest replacement;
+                lock (_gate)
+                {
+                    _loadings.Remove(request);
+                    request.Cancelled = true;
+                    replacement = _loadings.Count == 0
+                        ? null
+                        : _loadings[_loadings.Count - 1];
+                }
+                ReleaseRequest(request);
+                if (replacement == null)
+                {
+                    TryPlatformAction(() => _strategy.DismissLoading(request.RequestId));
+                }
+                else
+                {
+                    TryPlatformAction(() =>
+                        _strategy.ShowLoading(replacement.RequestId, replacement.Options));
+                }
+                throw;
+            }
+
+            return new LoadingHandle(
                 request.RequestId,
                 request.Tag,
                 request.GroupId,
@@ -293,6 +352,11 @@ namespace NativePrompt
                     _activeToast.Cancelled = true;
                     requests.Add(_activeToast);
                 }
+                foreach (LoadingRequest request in _loadings)
+                {
+                    request.Cancelled = true;
+                    requests.Add(request);
+                }
                 foreach (PromptRequest request in _pendingDeliveries)
                 {
                     request.Cancelled = true;
@@ -303,6 +367,7 @@ namespace NativePrompt
                 _activeAlert = null;
                 _bottomSheets.Clear();
                 _activeToast = null;
+                _loadings.Clear();
                 _pendingDeliveries.Clear();
             }
 
@@ -549,6 +614,45 @@ namespace NativePrompt
             if (active && !request.Completed)
             {
                 TryPlatformAction(() => _strategy.DismissToast(request.RequestId));
+            }
+        }
+
+        private void EndLoading(LoadingRequest request)
+        {
+            LoadingRequest replacement = null;
+            bool wasActive;
+            lock (_gate)
+            {
+                int index = _loadings.IndexOf(request);
+                if (index < 0 || request.Cancelled || request.Completed)
+                {
+                    return;
+                }
+
+                wasActive = index == _loadings.Count - 1;
+                _loadings.RemoveAt(index);
+                request.Completed = true;
+                request.Cancelled = true;
+                if (wasActive && _loadings.Count > 0)
+                {
+                    replacement = _loadings[_loadings.Count - 1];
+                }
+            }
+
+            ReleaseRequest(request);
+            if (!wasActive)
+            {
+                return;
+            }
+
+            if (replacement == null)
+            {
+                TryPlatformAction(() => _strategy.DismissLoading(request.RequestId));
+            }
+            else
+            {
+                TryPlatformAction(() =>
+                    _strategy.ShowLoading(replacement.RequestId, replacement.Options));
             }
         }
 
@@ -810,6 +914,22 @@ namespace NativePrompt
             {
                 Options = null;
                 Callback = null;
+            }
+        }
+
+        private sealed class LoadingRequest : PromptRequest
+        {
+            internal LoadingRequest(string requestId, LoadingOptions options)
+                : base(requestId, options.Tag, options.GroupId)
+            {
+                Options = options;
+            }
+
+            internal LoadingOptions Options { get; private set; }
+
+            internal override void ReleaseContent()
+            {
+                Options = null;
             }
         }
     }

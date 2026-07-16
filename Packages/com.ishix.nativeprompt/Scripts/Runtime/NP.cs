@@ -110,6 +110,17 @@ namespace NativePrompt
                 onDismissed);
         }
 
+        /// <summary>
+        /// Shows a native loading overlay until its handle is dismissed or disposed.
+        /// </summary>
+        /// <param name="options">The loading appearance and interaction behavior.</param>
+        /// <returns>A handle that owns this loading request.</returns>
+        public static LoadingHandle ShowLoading(LoadingOptions options)
+        {
+            return NativePromptRuntime.ShowLoading(
+                NativePromptOptions.Normalize(options));
+        }
+
         internal static void RaiseAlertOpened(AlertOpenedEventArgs args) =>
             RaiseSafely(AlertOpened, args);
 
@@ -173,6 +184,14 @@ namespace NativePrompt
 
         /// <summary>Silently disposes the toast when <paramref name="owner"/> is destroyed.</summary>
         public static ToastHandle AddTo(this ToastHandle handle, MonoBehaviour owner)
+        {
+            Validate(handle, owner);
+            handle.AddTo(GetDestroyCancellationToken(owner));
+            return handle;
+        }
+
+        /// <summary>Ends the loading request when <paramref name="owner"/> is destroyed.</summary>
+        public static LoadingHandle AddTo(this LoadingHandle handle, MonoBehaviour owner)
         {
             Validate(handle, owner);
             handle.AddTo(GetDestroyCancellationToken(owner));

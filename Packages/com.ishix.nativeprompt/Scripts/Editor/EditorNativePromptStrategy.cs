@@ -14,6 +14,9 @@ namespace NativePrompt.Editor
             new Dictionary<string, EditorPromptWindow>(StringComparer.Ordinal);
         private readonly Dictionary<string, double> _toastDeadlines =
             new Dictionary<string, double>(StringComparer.Ordinal);
+        private string _loadingRequestId;
+        private LoadingOptions _loadingOptions;
+        private double _loadingDeadline;
 
         static EditorNativePromptStrategy()
         {
@@ -84,12 +87,39 @@ namespace NativePrompt.Editor
             UnsubscribeWhenIdle();
         }
 
+        public void ShowLoading(string requestId, LoadingOptions options)
+        {
+            _loadingRequestId = requestId;
+            _loadingOptions = options;
+            _loadingDeadline = EditorApplication.timeSinceStartup + options.ShowDelaySeconds;
+            EditorApplication.update -= UpdateLoading;
+            if (options.ShowDelaySeconds <= 0f)
+            {
+                LogLoading();
+            }
+            else
+            {
+                EditorApplication.update += UpdateLoading;
+            }
+        }
+
+        public void DismissLoading(string requestId)
+        {
+            if (_loadingRequestId != requestId)
+            {
+                return;
+            }
+
+            ClearLoading();
+        }
+
         public void Reset()
         {
             CloseAll(_alerts);
             CloseAll(_bottomSheets);
             _toastDeadlines.Clear();
             EditorApplication.update -= UpdateToasts;
+            ClearLoading();
         }
 
         private void CompleteAlert(string requestId, AlertResult result)
@@ -177,6 +207,40 @@ namespace NativePrompt.Editor
             {
                 EditorApplication.update -= UpdateToasts;
             }
+        }
+
+        private void UpdateLoading()
+        {
+            if (_loadingOptions == null ||
+                EditorApplication.timeSinceStartup < _loadingDeadline)
+            {
+                return;
+            }
+
+            EditorApplication.update -= UpdateLoading;
+            LogLoading();
+        }
+
+        private void LogLoading()
+        {
+            if (_loadingOptions == null)
+            {
+                return;
+            }
+
+            Debug.Log(
+                $"NativePrompt Loading: position={_loadingOptions.Position}, " +
+                $"size={_loadingOptions.Size}, message={_loadingOptions.Message ?? "<none>"}, " +
+                $"background={_loadingOptions.ShowsBackground}, " +
+                $"blocksInteraction={_loadingOptions.BlocksInteraction}");
+        }
+
+        private void ClearLoading()
+        {
+            EditorApplication.update -= UpdateLoading;
+            _loadingRequestId = null;
+            _loadingOptions = null;
+            _loadingDeadline = 0d;
         }
 
         private static void CloseAll(Dictionary<string, EditorPromptWindow> windows)

@@ -51,6 +51,7 @@ The shared runtime coordinator is responsible for:
 - dispatching completion to the Unity main thread;
 - clearing pending state safely during reset, Domain Reload, or Play Mode exit;
 - allowing the strategy to be replaced internally by tests without making it public.
+- retaining loading requests by request ID and applying only the newest active options.
 
 Each public handle owns a cancellation-token registration independently from the
 platform strategy. `AddTo(MonoBehaviour)` registers the owner's
@@ -84,6 +85,12 @@ travels through the handle to the coordinator; repeated dismiss requests are saf
 Bottom sheet action completion and cancellation use the same callback-once and
 request-ID rules. NativePrompt does not define a public queue-control API.
 
+Loading presentation is an ordered active-request list owned by the shared runtime.
+Every `ShowLoading` adds a request and applies its normalized options to the one
+native loading hierarchy. Ending a non-current request only removes that request.
+Ending the current request either reapplies the next-newest options or removes the
+hierarchy when no requests remain. Loading has no native-to-managed callback path.
+
 ## Native callback contract
 
 Every native presentation receives an opaque request ID. Native code sends the ID
@@ -104,6 +111,9 @@ been consumed, and invokes it once. Platform strategies must not bypass this pat
   backdrop taps, animation, and window insets according to each prompt contract.
 - Unity Editor uses a Unity native dialog for alerts. Bottom sheets and toasts log
   their content and still complete rather than leaving requests pending.
+- Loading uses an existing window/activity view hierarchy and never presents a new
+  window, view controller, activity, or dialog. Its input blocker is active before
+  delayed visuals, and native monotonic timers make delay independent of Unity time.
 
 Native UI visual details remain platform-owned. Public results, queue behavior,
 replacement behavior, callback threading, and callback cardinality remain shared
