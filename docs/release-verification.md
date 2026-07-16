@@ -97,6 +97,7 @@ Use the sample controls and, for the complete position matrix, invoke
 4. Check all `ShowsBackground` / `BlocksInteraction` combinations. Background-only
    must pass pointer input, block-only must stop pointer input without a visible
    background, both false must pass input, and both true must block it.
+   The two blocking sample controls automatically dismiss after three seconds.
 5. Set a non-white color and multiple valid opacities. Only the full-screen
    background changes opacity; spinner and text remain fully opaque.
 6. Set a visible delay such as 1 second. When blocking is enabled, input must stop

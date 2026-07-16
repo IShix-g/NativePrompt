@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -11,6 +12,7 @@ namespace NativePrompt.Samples
         public const float LogicalWidth = 540f;
         public const float LogicalHeight = 960f;
         public const float LogicalAspectRatio = LogicalWidth / LogicalHeight;
+        private const float BlockingLoadingAutoDismissSeconds = 3f;
 
         public static readonly string[] RequiredButtonNames =
         {
@@ -39,6 +41,7 @@ namespace NativePrompt.Samples
         private Label _resultLabel;
         private ToastHandle _manualToast;
         private LoadingHandle _loading;
+        private Coroutine _loadingAutoDismissCoroutine;
 
         public IReadOnlyDictionary<string, string> BoundApis => _boundApis;
 
@@ -80,6 +83,7 @@ namespace NativePrompt.Samples
             _boundApis.Clear();
             _actions.Clear();
             _manualToast = null;
+            StopLoadingAutoDismiss();
             _loading?.Dispose();
             _loading = null;
         }
@@ -288,10 +292,8 @@ namespace NativePrompt.Samples
         {
             ShowLoading(new LoadingOptions
             {
-                Position = LoadingPosition.Center,
-                Size = LoadingSize.Small,
                 ShowDelaySeconds = 0f
-            }, "Loading: spinner only, pass-through");
+            }, "Loading: spinner only, bottom-right / medium, pass-through");
         }
 
         private void ShowBackgroundLoading()
@@ -337,13 +339,23 @@ namespace NativePrompt.Samples
 
         private void ShowLoading(LoadingOptions options, string result)
         {
+            StopLoadingAutoDismiss();
             _loading?.Dismiss();
             _loading = NP.ShowLoading(options).AddTo(this);
+            if (options.BlocksInteraction)
+            {
+                _loadingAutoDismissCoroutine = StartCoroutine(
+                    DismissLoadingAfterDelay(_loading));
+                SetResult($"{result}; auto-dismiss in {BlockingLoadingAutoDismissSeconds:0}s");
+                return;
+            }
+
             SetResult(result);
         }
 
         private void DismissLoading()
         {
+            StopLoadingAutoDismiss();
             if (_loading == null)
             {
                 SetResult("Loading: no request is active");
@@ -353,6 +365,32 @@ namespace NativePrompt.Samples
             _loading.Dismiss();
             _loading = null;
             SetResult("Loading: dismissed");
+        }
+
+        private IEnumerator DismissLoadingAfterDelay(LoadingHandle loading)
+        {
+            yield return new WaitForSecondsRealtime(BlockingLoadingAutoDismissSeconds);
+            _loadingAutoDismissCoroutine = null;
+
+            if (!ReferenceEquals(_loading, loading))
+            {
+                yield break;
+            }
+
+            loading.Dismiss();
+            _loading = null;
+            SetResult($"Loading: auto-dismissed after {BlockingLoadingAutoDismissSeconds:0}s");
+        }
+
+        private void StopLoadingAutoDismiss()
+        {
+            if (_loadingAutoDismissCoroutine == null)
+            {
+                return;
+            }
+
+            StopCoroutine(_loadingAutoDismissCoroutine);
+            _loadingAutoDismissCoroutine = null;
         }
 
         private void SetResult(string value)

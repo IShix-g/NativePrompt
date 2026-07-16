@@ -7,7 +7,9 @@ the `LATEST RESULT` panel.
 
 The Loading controls cover all four background/input-block combinations, multiple
 positions and sizes, messages, and immediate/delayed presentation. Select
-`Dismiss loading` to end the active request. The manual toast remains visible until
+`Dismiss loading` to end the active request. Blocking Loading samples automatically
+dismiss after three seconds so they cannot leave the sample controls inaccessible.
+The manual toast remains visible until
 `Dismiss manual` is selected. Native UI
 appearance is intentionally verified on a device; the PlayMode tests cover scene
 loading, UI wiring, viewport ratio, and result updates.

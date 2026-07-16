@@ -37,8 +37,8 @@
                 <ui:VisualElement class="button-grid">
                     <ui:Button name="loading-spinner-button" text="Spinner only" class="action-button" />
                     <ui:Button name="loading-background-button" text="Background only" class="action-button" />
-                    <ui:Button name="loading-block-button" text="Block only" class="action-button" />
-                    <ui:Button name="loading-block-background-button" text="Background + block" class="action-button" />
+                    <ui:Button name="loading-block-button" text="Block only (3s)" class="action-button" />
+                    <ui:Button name="loading-block-background-button" text="Background + block (3s)" class="action-button" />
                     <ui:Button name="loading-dismiss-button" text="Dismiss loading" class="action-button secondary-button" />
                 </ui:VisualElement>
             </ui:VisualElement>

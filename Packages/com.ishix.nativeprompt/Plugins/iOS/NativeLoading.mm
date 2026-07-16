@@ -146,6 +146,7 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
         initWithActivityIndicatorStyle:indicatorStyle];
     indicator.translatesAutoresizingMaskIntoConstraints = NO;
     indicator.userInteractionEnabled = NO;
+    indicator.color = UIColor.systemBlueColor;
     if (size == 0)
     {
         indicator.transform = CGAffineTransformMakeScale(0.75, 0.75);
