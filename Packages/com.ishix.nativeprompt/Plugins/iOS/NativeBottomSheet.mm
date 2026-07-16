@@ -6,7 +6,7 @@ typedef void (*NativePromptCancelledCallback)(const char *requestId);
 
 static const void *NativePromptBottomSheetDelegateKey = &NativePromptBottomSheetDelegateKey;
 
-@interface NativePromptBottomSheetDelegate : NSObject <UIAdaptivePresentationControllerDelegate, UIGestureRecognizerDelegate>
+@interface NativePromptBottomSheetDelegate : NSObject <UIPopoverPresentationControllerDelegate, UIGestureRecognizerDelegate>
 
 @property(nonatomic, copy) NSString *requestId;
 @property(nonatomic, weak) UIAlertController *controller;
@@ -231,6 +231,9 @@ extern "C" void NativePrompt_ShowBottomSheet(
         UIPopoverPresentationController *popover = controller.popoverPresentationController;
         if (popover != nil)
         {
+            // Compact action sheets adapt to an alert presentation controller that
+            // rejects delegate changes. Only popovers need dismissal delegation.
+            popover.delegate = delegate;
             UIView *anchorView = presenter.view;
             CGRect safeBounds = UIEdgeInsetsInsetRect(anchorView.bounds, anchorView.safeAreaInsets);
             CGFloat anchorY = MAX(
@@ -257,7 +260,6 @@ extern "C" void NativePrompt_ShowBottomSheet(
                 [container addGestureRecognizer:backgroundTap];
             }
         }];
-        controller.presentationController.delegate = delegate;
     });
 }
 
