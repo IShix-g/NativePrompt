@@ -336,6 +336,8 @@ public sealed class NativeLoadingExample : MonoBehaviour
             Position = LoadingPosition.Center,
             Size = LoadingSize.Medium,
             Message = "Processing...",
+            MessageColor = new Color(0.33f, 0.33f, 0.33f, 1f),
+            MessageFontSize = 17f,
             ShowDelaySeconds = 0.25f,
             Tag = "purchase"
         }).AddTo(this);
@@ -354,7 +356,9 @@ begins immediately, while the background, spinner, and optional message appear
 together after `ShowDelaySeconds`. Ending a request during the delay prevents its
 visual elements from appearing. Five safe-area-aware positions and three native
 spinner sizes are available. On iOS, `Medium` renders at approximately 25 pt.
-When present, the message is centered below the spinner with native spacing.
+When present, the message is centered below the spinner with native spacing and
+uses configurable Unity `Color` (including alpha) and font size. Font size is
+interpreted as pt on iOS and sp on Android; the defaults are dark gray and 17.
 
 Multiple loading handles may coexist. The newest active handle supplies the visible
 options; ending it restores the next-newest request. The native layer keeps only one

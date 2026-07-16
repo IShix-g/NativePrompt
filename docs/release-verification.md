@@ -72,7 +72,7 @@ verification artifacts rather than adding them to the package.
 1. Open **Window > General > Test Runner**.
 2. Run all **EditMode** tests, then all **PlayMode** tests.
 3. Confirm there are zero failed tests and specifically check coverage for Loading
-   defaults/normalization, whitespace messages, invalid opacity/delay, idempotent
+   defaults/normalization, whitespace messages, invalid opacity/delay/font size, idempotent
    `Dismiss`/`Dispose`, `AddTo`, delayed cancellation, reverse-order completion,
    newest-options restoration, reset cleanup, and normalized strategy input.
 4. In PlayMode, confirm the sample scene loads, every Loading button is bound, the
@@ -95,16 +95,17 @@ temporary caller script when checking those combinations.
 1. Check `Center`, `TopLeft`, `TopRight`, `BottomLeft`, and `BottomRight` in portrait
    and landscape. Corners must remain inside the iOS Safe Area or Android system-bar
    insets with visible internal spacing.
-2. Check `Small`, `Medium`, and `Large`. Only the spinner changes size; message text
-   keeps the platform-standard size.
+2. Check `Small`, `Medium`, and `Large`. Only the spinner changes size.
 3. Check a null/whitespace message and a long message. No empty label should appear,
-   and long text must remain within the safe area.
+   and long text must remain within the safe area. Set `MessageColor` with a visible
+   alpha value and try multiple `MessageFontSize` values; iOS must use pt and Android
+   must use sp.
 4. Check all `ShowsBackground` / `BlocksInteraction` combinations. Background-only
    must pass pointer input, block-only must stop pointer input without a visible
    background, both false must pass input, and both true must block it.
    The blocking sample preset automatically dismisses after three seconds.
 5. Set a non-white color and multiple valid opacities. Only the full-screen
-   background changes opacity; spinner and text remain fully opaque.
+   background changes opacity independently from the spinner and message.
 6. Set a visible delay such as 1 second. When blocking is enabled, input must stop
    immediately. Dismiss inside the delay and confirm no background, spinner, or
    message flashes and input resumes.

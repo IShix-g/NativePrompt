@@ -134,6 +134,14 @@ namespace NativePrompt
                     "Loading show delay must be finite and zero or greater.",
                     nameof(options.ShowDelaySeconds));
             }
+            if (float.IsNaN(options.MessageFontSize) ||
+                float.IsInfinity(options.MessageFontSize) ||
+                options.MessageFontSize <= 0f)
+            {
+                throw new ArgumentException(
+                    "Loading message font size must be finite and greater than zero.",
+                    nameof(options.MessageFontSize));
+            }
             if (!Enum.IsDefined(typeof(LoadingPosition), options.Position))
             {
                 throw new ArgumentOutOfRangeException(nameof(options.Position));
@@ -152,6 +160,8 @@ namespace NativePrompt
                 Position = options.Position,
                 Size = options.Size,
                 Message = OptionalText(options.Message),
+                MessageColor = options.MessageColor,
+                MessageFontSize = options.MessageFontSize,
                 ShowDelaySeconds = options.ShowDelaySeconds,
                 Tag = options.Tag,
                 GroupId = options.GroupId

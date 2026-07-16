@@ -12,6 +12,8 @@ All notable changes to this package are documented in this file.
 - Request-ID-based Loading ownership with newest-options presentation, restoration
   of the next-newest active request, reset cleanup, and EditMode coverage.
 - Loading sample controls plus Unity Test Runner and device verification guidance.
+- Configurable Loading message color (including alpha) and font size, with native
+  pt/sp unit handling on iOS and Android.
 
 - `AlertHandle`, `BottomSheetHandle`, and the shared `IPromptHandle` contract, with
   request-scoped, idempotent dismissal on iOS, Android, and the Unity Editor.

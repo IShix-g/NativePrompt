@@ -158,6 +158,11 @@ namespace NativePrompt
                     options.BackgroundColor.g,
                     options.BackgroundColor.b,
                     options.BackgroundOpacity,
+                    options.MessageColor.r,
+                    options.MessageColor.g,
+                    options.MessageColor.b,
+                    options.MessageColor.a,
+                    options.MessageFontSize,
                     (int)options.Position,
                     (int)options.Size,
                     options.ShowDelaySeconds);

@@ -2,7 +2,6 @@ package com.ishix.nativeprompt;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Handler;
@@ -45,6 +44,11 @@ public final class NativeLoading {
             final float backgroundGreen,
             final float backgroundBlue,
             final float backgroundOpacity,
+            final float messageRed,
+            final float messageGreen,
+            final float messageBlue,
+            final float messageAlpha,
+            final float messageFontSize,
             final int position,
             final int size,
             final float showDelaySeconds) {
@@ -63,6 +67,11 @@ public final class NativeLoading {
                 backgroundGreen,
                 backgroundBlue,
                 backgroundOpacity,
+                messageRed,
+                messageGreen,
+                messageBlue,
+                messageAlpha,
+                messageFontSize,
                 position,
                 size,
                 showDelaySeconds));
@@ -96,6 +105,11 @@ public final class NativeLoading {
             float backgroundGreen,
             float backgroundBlue,
             float backgroundOpacity,
+            float messageRed,
+            float messageGreen,
+            float messageBlue,
+            float messageAlpha,
+            float messageFontSize,
             int position,
             int size,
             float showDelaySeconds) {
@@ -120,6 +134,11 @@ public final class NativeLoading {
                 backgroundGreen,
                 backgroundBlue,
                 backgroundOpacity,
+                messageRed,
+                messageGreen,
+                messageBlue,
+                messageAlpha,
+                messageFontSize,
                 position,
                 size,
                 showDelaySeconds);
@@ -174,6 +193,11 @@ public final class NativeLoading {
                 float backgroundGreen,
                 float backgroundBlue,
                 float backgroundOpacity,
+                float messageRed,
+                float messageGreen,
+                float messageBlue,
+                float messageAlpha,
+                float messageFontSize,
                 int position,
                 int size,
                 float showDelaySeconds) {
@@ -193,7 +217,14 @@ public final class NativeLoading {
             if (content != null) {
                 overlay.removeView(content);
             }
-            content = createContent(message, size);
+            content = createContent(
+                    message,
+                    messageRed,
+                    messageGreen,
+                    messageBlue,
+                    messageAlpha,
+                    messageFontSize,
+                    size);
             content.setVisibility(View.GONE);
             overlay.addView(content, createContentLayoutParams(position));
             updateContentLayout(overlay.getRootWindowInsets());
@@ -216,7 +247,14 @@ public final class NativeLoading {
             }
         }
 
-        private LinearLayout createContent(String message, int size) {
+        private LinearLayout createContent(
+                String message,
+                float messageRed,
+                float messageGreen,
+                float messageBlue,
+                float messageAlpha,
+                float messageFontSize,
+                int size) {
             LinearLayout group = new LinearLayout(activity);
             group.setOrientation(LinearLayout.VERTICAL);
             group.setGravity(Gravity.CENTER);
@@ -245,33 +283,18 @@ public final class NativeLoading {
                 label.setMaxLines(4);
                 label.setEllipsize(TextUtils.TruncateAt.END);
                 label.setTag("NativePromptLoadingMessage");
-                applyPrimaryTextColor(label);
+                label.setTextColor(Color.argb(
+                        colorComponent(messageAlpha),
+                        colorComponent(messageRed),
+                        colorComponent(messageGreen),
+                        colorComponent(messageBlue)));
+                label.setTextSize(TypedValue.COMPLEX_UNIT_SP, messageFontSize);
                 group.addView(label, new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT));
             }
 
             return group;
-        }
-
-        private void applyPrimaryTextColor(TextView label) {
-            TypedValue value = new TypedValue();
-            if (!activity.getTheme().resolveAttribute(
-                    android.R.attr.textColorPrimary,
-                    value,
-                    true)) {
-                return;
-            }
-
-            if (value.resourceId != 0) {
-                ColorStateList colors = activity.getResources().getColorStateList(
-                        value.resourceId,
-                        activity.getTheme());
-                label.setTextColor(colors);
-            } else if (value.type >= TypedValue.TYPE_FIRST_COLOR_INT &&
-                    value.type <= TypedValue.TYPE_LAST_COLOR_INT) {
-                label.setTextColor(value.data);
-            }
         }
 
         private FrameLayout.LayoutParams createContentLayoutParams(int position) {

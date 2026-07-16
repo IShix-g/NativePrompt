@@ -76,6 +76,8 @@ namespace NativePrompt.Tests
                 BackgroundOpacity = 0.75f,
                 Position = LoadingPosition.TopLeft,
                 Size = LoadingSize.Large,
+                MessageColor = new Color(0.1f, 0.2f, 0.3f, 0.4f),
+                MessageFontSize = 21f,
                 ShowDelaySeconds = 0.5f
             });
 
@@ -108,6 +110,8 @@ namespace NativePrompt.Tests
             Assert.That(loading.BackgroundOpacity, Is.EqualTo(0.75f));
             Assert.That(loading.Position, Is.EqualTo(LoadingPosition.TopLeft));
             Assert.That(loading.Size, Is.EqualTo(LoadingSize.Large));
+            Assert.That(loading.MessageColor, Is.EqualTo(new Color(0.1f, 0.2f, 0.3f, 0.4f)));
+            Assert.That(loading.MessageFontSize, Is.EqualTo(21f));
             Assert.That(loading.ShowDelaySeconds, Is.EqualTo(0.5f));
         }
 
@@ -147,6 +151,12 @@ namespace NativePrompt.Tests
                 NP.ShowLoading(new LoadingOptions { ShowDelaySeconds = -0.01f }));
             Assert.Throws<ArgumentException>(() =>
                 NP.ShowLoading(new LoadingOptions { ShowDelaySeconds = float.PositiveInfinity }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { MessageFontSize = 0f }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { MessageFontSize = float.NaN }));
+            Assert.Throws<ArgumentException>(() =>
+                NP.ShowLoading(new LoadingOptions { MessageFontSize = float.PositiveInfinity }));
             Assert.Throws<ArgumentOutOfRangeException>(() =>
                 NP.ShowLoading(new LoadingOptions { Position = (LoadingPosition)999 }));
             Assert.Throws<ArgumentOutOfRangeException>(() =>
@@ -166,6 +176,8 @@ namespace NativePrompt.Tests
             Assert.That(options.Position, Is.EqualTo(LoadingPosition.BottomRight));
             Assert.That(options.Size, Is.EqualTo(LoadingSize.Medium));
             Assert.That(options.Message, Is.Null);
+            Assert.That(options.MessageColor, Is.EqualTo(new Color(0.33f, 0.33f, 0.33f, 1f)));
+            Assert.That(options.MessageFontSize, Is.EqualTo(17f));
             Assert.That(options.ShowDelaySeconds, Is.EqualTo(0.25f));
         }
 

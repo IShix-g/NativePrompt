@@ -231,6 +231,8 @@ namespace NativePrompt.Editor
             Debug.Log(
                 $"NativePrompt Loading: position={_loadingOptions.Position}, " +
                 $"size={_loadingOptions.Size}, message={_loadingOptions.Message ?? "<none>"}, " +
+                $"messageColor={_loadingOptions.MessageColor}, " +
+                $"messageFontSize={_loadingOptions.MessageFontSize}, " +
                 $"background={_loadingOptions.ShowsBackground}, " +
                 $"blocksInteraction={_loadingOptions.BlocksInteraction}");
         }

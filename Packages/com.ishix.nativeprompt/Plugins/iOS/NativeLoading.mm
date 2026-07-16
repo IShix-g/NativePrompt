@@ -39,6 +39,11 @@
            backgroundGreen:(CGFloat)backgroundGreen
             backgroundBlue:(CGFloat)backgroundBlue
          backgroundOpacity:(CGFloat)backgroundOpacity
+                messageRed:(CGFloat)messageRed
+              messageGreen:(CGFloat)messageGreen
+               messageBlue:(CGFloat)messageBlue
+              messageAlpha:(CGFloat)messageAlpha
+           messageFontSize:(CGFloat)messageFontSize
                   position:(NSInteger)position
                       size:(NSInteger)size
           showDelaySeconds:(NSTimeInterval)showDelaySeconds;
@@ -118,6 +123,11 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
            backgroundGreen:(CGFloat)backgroundGreen
             backgroundBlue:(CGFloat)backgroundBlue
          backgroundOpacity:(CGFloat)backgroundOpacity
+                messageRed:(CGFloat)messageRed
+              messageGreen:(CGFloat)messageGreen
+               messageBlue:(CGFloat)messageBlue
+              messageAlpha:(CGFloat)messageAlpha
+           messageFontSize:(CGFloat)messageFontSize
                   position:(NSInteger)position
                       size:(NSInteger)size
           showDelaySeconds:(NSTimeInterval)showDelaySeconds
@@ -163,9 +173,12 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
         UILabel *label = [UILabel new];
         label.translatesAutoresizingMaskIntoConstraints = NO;
         label.text = message;
-        label.textColor = UIColor.labelColor;
-        label.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
-        label.adjustsFontForContentSizeCategory = YES;
+        label.textColor = [UIColor
+            colorWithRed:fmin(fmax(messageRed, 0.0), 1.0)
+            green:fmin(fmax(messageGreen, 0.0), 1.0)
+            blue:fmin(fmax(messageBlue, 0.0), 1.0)
+            alpha:fmin(fmax(messageAlpha, 0.0), 1.0)];
+        label.font = [UIFont systemFontOfSize:messageFontSize];
         label.textAlignment = NSTextAlignmentCenter;
         label.numberOfLines = 0;
         label.lineBreakMode = NSLineBreakByWordWrapping;
@@ -267,6 +280,11 @@ extern "C" void NativePrompt_ShowLoading(
     float backgroundGreen,
     float backgroundBlue,
     float backgroundOpacity,
+    float messageRed,
+    float messageGreen,
+    float messageBlue,
+    float messageAlpha,
+    float messageFontSize,
     int position,
     int size,
     float showDelaySeconds)
@@ -300,6 +318,11 @@ extern "C" void NativePrompt_ShowLoading(
             backgroundGreen:backgroundGreen
             backgroundBlue:backgroundBlue
             backgroundOpacity:backgroundOpacity
+            messageRed:messageRed
+            messageGreen:messageGreen
+            messageBlue:messageBlue
+            messageAlpha:messageAlpha
+            messageFontSize:messageFontSize
             position:position
             size:size
             showDelaySeconds:showDelaySeconds];

@@ -121,6 +121,8 @@ LoadingHandle loading = NP.ShowLoading(new LoadingOptions
     Position = LoadingPosition.BottomRight,
     Size = LoadingSize.Medium,
     Message = "Processing...",
+    MessageColor = new Color(0.33f, 0.33f, 0.33f, 1f),
+    MessageFontSize = 17f,
     ShowDelaySeconds = 0.25f,
     Tag = "purchase",
     GroupId = "checkout"
@@ -135,7 +137,9 @@ background with `0.5` opacity, `BottomRight`, `Medium`, no message, and a `0.25`
 second visual delay. `LoadingPosition` supports `Center`, `TopLeft`, `TopRight`,
 `BottomLeft`, and `BottomRight`; `LoadingSize` supports `Small`, `Medium`, and
 `Large`. On iOS, `Medium` renders at approximately 25 pt. Whitespace-only messages
-are omitted. When present, the message is centered 8 pt/dp below the spinner.
+are omitted. When present, the message is centered 8 pt/dp below the spinner and
+uses `MessageColor`, including its alpha channel. `MessageFontSize` is interpreted
+as pt on iOS and sp on Android. Their defaults are dark gray and `17f`.
 
 Background visibility and pointer-input blocking are independent. If blocking is
 enabled, a transparent blocker starts immediately. The background, spinner, and
@@ -251,6 +255,7 @@ native request:
   contain non-whitespace text, and IDs must be unique within the sheet.
 - `ToastOptions.Duration` must be greater than zero when `AutoDismiss` is enabled.
 - `LoadingOptions.BackgroundOpacity` must be finite and between zero and one.
+- `LoadingOptions.MessageFontSize` must be finite and greater than zero.
 - `LoadingOptions.ShowDelaySeconds` must be finite and zero or greater.
 - Invalid required text, action collections, action values, or duration values cause
   an `ArgumentException`; null top-level options cause `ArgumentNullException`.
