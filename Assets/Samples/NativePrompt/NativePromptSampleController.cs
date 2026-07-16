@@ -392,10 +392,11 @@ namespace NativePrompt.Samples
                 BlocksInteraction = true,
                 ShowsBackground = true,
                 BackgroundColor = Color.white,
-                BackgroundOpacity = 0.5f,
+                BackgroundOpacity = 0.75f,
                 Position = LoadingPosition.Center,
                 Size = LoadingSize.Medium,
                 Message = "Processing...",
+                MessageColor = new Color(0.33f, 0.33f, 0.33f, 1f),
                 ShowDelaySeconds = 0.25f
             }, "Loading: centered background and blocker");
         }
