@@ -8,6 +8,10 @@ namespace NativePrompt.Editor
     [InitializeOnLoad]
     internal sealed class EditorNativePromptStrategy : INativePromptStrategy
     {
+        private readonly Dictionary<string, EditorPromptWindow> _alerts =
+            new Dictionary<string, EditorPromptWindow>(StringComparer.Ordinal);
+        private readonly Dictionary<string, EditorPromptWindow> _bottomSheets =
+            new Dictionary<string, EditorPromptWindow>(StringComparer.Ordinal);
         private readonly Dictionary<string, double> _toastDeadlines =
             new Dictionary<string, double>(StringComparer.Ordinal);
 
@@ -19,45 +23,51 @@ namespace NativePrompt.Editor
 
         public void ShowAlert(string requestId, AlertOptions options)
         {
-            string title = options.Title ?? string.Empty;
-            AlertResult result;
-            if (options.YesButtonText != null && options.NoButtonText != null)
-            {
-                bool selectedYes = EditorUtility.DisplayDialog(
-                    title,
-                    options.Content,
-                    options.YesButtonText,
-                    options.NoButtonText);
-                result = selectedYes ? AlertResult.Yes : AlertResult.No;
-            }
-            else if (options.YesButtonText != null)
-            {
-                EditorUtility.DisplayDialog(title, options.Content, options.YesButtonText);
-                result = AlertResult.Yes;
-            }
-            else if (options.NoButtonText != null)
-            {
-                EditorUtility.DisplayDialog(title, options.Content, options.NoButtonText);
-                result = AlertResult.No;
-            }
-            else
-            {
-                EditorUtility.DisplayDialog(title, options.Content, options.CloseButtonText);
-                result = AlertResult.Closed;
-            }
+            EditorPromptWindow window = EditorPromptWindow.CreateAlert(
+                requestId,
+                options,
+                CompleteAlert,
+                AlertWindowClosed);
+            _alerts.Add(requestId, window);
+            window.ShowUtility();
+            NativePromptCallbackReceiver.AlertOpened(requestId);
+        }
 
-            NativePromptCallbackReceiver.AlertCompleted(requestId, result);
+        public void DismissAlert(string requestId)
+        {
+            if (_alerts.TryGetValue(requestId, out EditorPromptWindow window))
+            {
+                _alerts.Remove(requestId);
+                window.CloseWithoutCallback();
+            }
         }
 
         public void ShowBottomSheet(string requestId, BottomSheetOptions options)
         {
-            Debug.Log(FormatBottomSheet(options));
-            NativePromptCallbackReceiver.BottomSheetCancelled(requestId);
+            EditorPromptWindow window = EditorPromptWindow.CreateBottomSheet(
+                requestId,
+                options,
+                CompleteBottomSheetAction,
+                CompleteBottomSheetCancellation,
+                BottomSheetWindowClosed);
+            _bottomSheets.Add(requestId, window);
+            window.ShowUtility();
+            NativePromptCallbackReceiver.BottomSheetOpened(requestId);
+        }
+
+        public void DismissBottomSheet(string requestId)
+        {
+            if (_bottomSheets.TryGetValue(requestId, out EditorPromptWindow window))
+            {
+                _bottomSheets.Remove(requestId);
+                window.CloseWithoutCallback();
+            }
         }
 
         public void ShowToast(string requestId, ToastOptions options)
         {
             Debug.Log($"NativePrompt Toast: {options.Message}");
+            NativePromptCallbackReceiver.ToastShown(requestId);
             if (!options.AutoDismiss)
             {
                 return;
@@ -76,8 +86,56 @@ namespace NativePrompt.Editor
 
         public void Reset()
         {
+            CloseAll(_alerts);
+            CloseAll(_bottomSheets);
             _toastDeadlines.Clear();
             EditorApplication.update -= UpdateToasts;
+        }
+
+        private void CompleteAlert(string requestId, AlertResult result)
+        {
+            if (_alerts.TryGetValue(requestId, out EditorPromptWindow window))
+            {
+                _alerts.Remove(requestId);
+                window.CloseWithoutCallback();
+                NativePromptCallbackReceiver.AlertCompleted(requestId, result);
+            }
+        }
+
+        private void AlertWindowClosed(string requestId)
+        {
+            if (_alerts.Remove(requestId))
+            {
+                NativePromptCallbackReceiver.AlertCompleted(requestId, AlertResult.Closed);
+            }
+        }
+
+        private void CompleteBottomSheetAction(string requestId, string actionId)
+        {
+            if (_bottomSheets.TryGetValue(requestId, out EditorPromptWindow window))
+            {
+                _bottomSheets.Remove(requestId);
+                window.CloseWithoutCallback();
+                NativePromptCallbackReceiver.BottomSheetActionSelected(requestId, actionId);
+            }
+        }
+
+        private void CompleteBottomSheetCancellation(string requestId)
+        {
+            if (_bottomSheets.TryGetValue(requestId, out EditorPromptWindow window))
+            {
+                _bottomSheets.Remove(requestId);
+                window.CloseWithoutCallback();
+                NativePromptCallbackReceiver.BottomSheetCancelled(requestId);
+            }
+        }
+
+        private void BottomSheetWindowClosed(string requestId)
+        {
+            if (_bottomSheets.Remove(requestId))
+            {
+                NativePromptCallbackReceiver.BottomSheetCancelled(requestId);
+            }
         }
 
         private void UpdateToasts()
@@ -96,7 +154,6 @@ namespace NativePrompt.Editor
                 {
                     requestIds = new string[_toastDeadlines.Count];
                 }
-
                 requestIds[count++] = toast.Key;
             }
 
@@ -122,34 +179,142 @@ namespace NativePrompt.Editor
             }
         }
 
-        private static void ThrowNotImplemented()
+        private static void CloseAll(Dictionary<string, EditorPromptWindow> windows)
         {
-            throw new NotImplementedException(
-                "The Editor native UI strategy is implemented by the prompt feature issues.");
+            EditorPromptWindow[] values = new EditorPromptWindow[windows.Count];
+            windows.Values.CopyTo(values, 0);
+            windows.Clear();
+            foreach (EditorPromptWindow window in values)
+            {
+                window.CloseWithoutCallback();
+            }
+        }
+    }
+
+    internal sealed class EditorPromptWindow : EditorWindow
+    {
+        private string _requestId;
+        private AlertOptions _alert;
+        private BottomSheetOptions _bottomSheet;
+        private Action<string, AlertResult> _alertCompleted;
+        private Action<string, string> _actionSelected;
+        private Action<string> _cancelled;
+        private Action<string> _closed;
+        private bool _suppressClose;
+
+        internal static EditorPromptWindow CreateAlert(
+            string requestId,
+            AlertOptions options,
+            Action<string, AlertResult> completed,
+            Action<string> closed)
+        {
+            var window = CreateInstance<EditorPromptWindow>();
+            window._requestId = requestId;
+            window._alert = options;
+            window._alertCompleted = completed;
+            window._closed = closed;
+            window.titleContent = new GUIContent(options.Title ?? "NativePrompt Alert");
+            window.minSize = new Vector2(360f, 140f);
+            return window;
         }
 
-        private static string FormatBottomSheet(BottomSheetOptions options)
+        internal static EditorPromptWindow CreateBottomSheet(
+            string requestId,
+            BottomSheetOptions options,
+            Action<string, string> actionSelected,
+            Action<string> cancelled,
+            Action<string> closed)
         {
-            var message = new System.Text.StringBuilder("NativePrompt Bottom Sheet");
-            message.Append("\nTitle: ").Append(options.Title ?? "<none>");
-            message.Append("\nContent: ").Append(options.Content ?? "<none>");
-            message.Append("\nCancel: ").Append(options.CancelButtonText);
-            message.Append("\nActions:");
-            for (int index = 0; index < options.Actions.Length; index++)
+            var window = CreateInstance<EditorPromptWindow>();
+            window._requestId = requestId;
+            window._bottomSheet = options;
+            window._actionSelected = actionSelected;
+            window._cancelled = cancelled;
+            window._closed = closed;
+            window.titleContent = new GUIContent(options.Title ?? "NativePrompt Bottom Sheet");
+            window.minSize = new Vector2(360f, 180f);
+            return window;
+        }
+
+        internal void CloseWithoutCallback()
+        {
+            _suppressClose = true;
+            Close();
+        }
+
+        private void OnGUI()
+        {
+            GUILayout.Space(12f);
+            if (_alert != null)
             {
-                BottomSheetAction action = options.Actions[index];
-                message.Append("\n- ")
-                    .Append(action.Id)
-                    .Append(": ")
-                    .Append(action.Text)
-                    .Append(" [")
-                    .Append(action.Style)
-                    .Append(", Enabled=")
-                    .Append(action.Enabled)
-                    .Append(']');
+                DrawAlert();
+            }
+            else if (_bottomSheet != null)
+            {
+                DrawBottomSheet();
+            }
+        }
+
+        private void DrawAlert()
+        {
+            EditorGUILayout.LabelField(_alert.Content, EditorStyles.wordWrappedLabel);
+            GUILayout.FlexibleSpace();
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.FlexibleSpace();
+                if (_alert.NoButtonText != null && GUILayout.Button(_alert.NoButtonText))
+                {
+                    _alertCompleted(_requestId, AlertResult.No);
+                }
+                if (_alert.YesButtonText != null && GUILayout.Button(_alert.YesButtonText))
+                {
+                    _alertCompleted(_requestId, AlertResult.Yes);
+                }
+                if (_alert.YesButtonText == null && _alert.NoButtonText == null &&
+                    GUILayout.Button(_alert.CloseButtonText))
+                {
+                    _alertCompleted(_requestId, AlertResult.Closed);
+                }
+            }
+            GUILayout.Space(12f);
+        }
+
+        private void DrawBottomSheet()
+        {
+            if (_bottomSheet.Content != null)
+            {
+                EditorGUILayout.LabelField(_bottomSheet.Content, EditorStyles.wordWrappedLabel);
+                GUILayout.Space(8f);
             }
 
-            return message.ToString();
+            foreach (BottomSheetAction action in _bottomSheet.Actions)
+            {
+                using (new EditorGUI.DisabledScope(!action.Enabled))
+                {
+                    GUIStyle style = action.Style == BottomSheetActionStyle.Destructive
+                        ? new GUIStyle(GUI.skin.button) { normal = { textColor = new Color(0.75f, 0.1f, 0.1f) } }
+                        : GUI.skin.button;
+                    if (GUILayout.Button(action.Text, style))
+                    {
+                        _actionSelected(_requestId, action.Id);
+                    }
+                }
+            }
+
+            GUILayout.Space(4f);
+            if (GUILayout.Button(_bottomSheet.CancelButtonText))
+            {
+                _cancelled(_requestId);
+            }
+            GUILayout.Space(12f);
+        }
+
+        private void OnDestroy()
+        {
+            if (!_suppressClose)
+            {
+                _closed?.Invoke(_requestId);
+            }
         }
     }
 }

@@ -2,6 +2,28 @@
 
 All notable changes to this package are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- `AlertHandle`, `BottomSheetHandle`, and the shared `IPromptHandle` contract, with
+  request-scoped, idempotent dismissal on iOS, Android, and the Unity Editor.
+- Unique public `RequestId` values and caller-defined `Tag` / `GroupId` metadata on
+  every prompt handle and lifecycle event.
+- `NP.AlertOpened`, `AlertCompleted`, `BottomSheetOpened`,
+  `BottomSheetCompleted`, `ToastShown`, and `ToastDismissed` lifecycle events.
+- Coverage for active and queued Alert dismissal, request isolation, metadata
+  snapshots, lifecycle ordering, and exception isolation.
+
+### Changed
+
+- Alert and Bottom Sheet facade methods now return handles while remaining source
+  compatible with callers that ignore their return values.
+- Completion callbacks and lifecycle subscribers are isolated so an exception does
+  not stop later notifications or Alert FIFO processing.
+- Unity Editor Alert and Bottom Sheet presentation now uses dismissible,
+  non-blocking utility windows.
+
 ## [0.1.0] - 2026-07-15
 
 ### Added

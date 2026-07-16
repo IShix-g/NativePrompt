@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NativePrompt.Editor;
 using NUnit.Framework;
 using UnityEngine;
@@ -232,22 +233,14 @@ namespace NativePrompt.Tests
         }
 
         [Test]
-        public void EditorBottomSheet_LogsOptionsAndCompletesAsCancelled()
+        public void EditorBottomSheet_CanBeDismissedByItsHandle()
         {
             NativePromptRuntime.SetForTesting(new EditorNativePromptStrategy(), _dispatcher);
             _strategy.ClearResetCount();
-            const string expectedLog =
-                "NativePrompt Bottom Sheet\n" +
-                "Title: Choose\n" +
-                "Content: Details\n" +
-                "Cancel: Close\n" +
-                "Actions:\n" +
-                "- delete: Delete [Destructive, Enabled=False]";
-            LogAssert.Expect(LogType.Log, expectedLog);
             BottomSheetResult completed = default;
             int callbackCount = 0;
 
-            NP.ShowBottomSheet(new BottomSheetOptions
+            BottomSheetHandle handle = NP.ShowBottomSheet(new BottomSheetOptions
             {
                 Title = "Choose",
                 Content = "Details",
@@ -267,6 +260,8 @@ namespace NativePrompt.Tests
                 completed = result;
                 callbackCount++;
             });
+
+            handle.Dismiss();
 
             Assert.That(callbackCount, Is.EqualTo(1));
             Assert.That(completed.IsCancelled, Is.True);
@@ -501,6 +496,189 @@ namespace NativePrompt.Tests
         }
 
         [Test]
+        public void HandlesAndLifecycleEvents_ExposeUniqueSnapshotMetadataInOrder()
+        {
+            var order = new List<string>();
+            var requestIds = new HashSet<string>();
+            AlertOpenedEventArgs alertOpened = null;
+            AlertCompletedEventArgs alertCompleted = null;
+            BottomSheetCompletedEventArgs sheetCompleted = null;
+            ToastDismissedEventArgs toastDismissed = null;
+
+            EventHandler<AlertOpenedEventArgs> onAlertOpened = (_, args) =>
+            {
+                alertOpened = args;
+                order.Add("alert-opened");
+            };
+            EventHandler<AlertCompletedEventArgs> onAlertCompleted = (_, args) =>
+            {
+                alertCompleted = args;
+                order.Add("alert-event");
+            };
+            EventHandler<BottomSheetCompletedEventArgs> onSheetCompleted = (_, args) =>
+                sheetCompleted = args;
+            EventHandler<ToastDismissedEventArgs> onToastDismissed = (_, args) =>
+                toastDismissed = args;
+
+            NP.AlertOpened += onAlertOpened;
+            NP.AlertCompleted += onAlertCompleted;
+            NP.BottomSheetCompleted += onSheetCompleted;
+            NP.ToastDismissed += onToastDismissed;
+            try
+            {
+                var alertOptions = new AlertOptions
+                {
+                    Content = "Alert",
+                    Tag = "alert-tag",
+                    GroupId = "screen"
+                };
+                AlertHandle alert = NP.ShowAlert(alertOptions, _ => order.Add("alert-callback"));
+                alertOptions.Tag = "changed";
+                NativePromptCallbackReceiver.AlertOpened(alert.RequestId);
+                NativePromptCallbackReceiver.AlertCompleted(alert.RequestId, AlertResult.Closed);
+
+                BottomSheetHandle sheet = NP.ShowBottomSheet(new BottomSheetOptions
+                {
+                    Tag = "sheet-tag",
+                    GroupId = "screen",
+                    Actions = new[] { new BottomSheetAction { Id = "go", Text = "Go" } }
+                });
+                NativePromptCallbackReceiver.BottomSheetOpened(sheet.RequestId);
+                NativePromptCallbackReceiver.BottomSheetCancelled(sheet.RequestId);
+
+                ToastHandle toast = NP.ShowToast(new ToastOptions
+                {
+                    Message = "Toast",
+                    Tag = "toast-tag",
+                    GroupId = "screen"
+                });
+                NativePromptCallbackReceiver.ToastShown(toast.RequestId);
+                NativePromptCallbackReceiver.ToastDismissed(
+                    toast.RequestId,
+                    ToastDismissReason.TimedOut);
+
+                requestIds.Add(alert.RequestId);
+                requestIds.Add(sheet.RequestId);
+                requestIds.Add(toast.RequestId);
+                Assert.That(requestIds, Has.Count.EqualTo(3));
+                Assert.That(alert.Tag, Is.EqualTo("alert-tag"));
+                Assert.That(alert.GroupId, Is.EqualTo("screen"));
+                Assert.That(alertOpened.Tag, Is.EqualTo(alert.Tag));
+                Assert.That(alertOpened.GroupId, Is.EqualTo(alert.GroupId));
+                Assert.That(alertCompleted.RequestId, Is.EqualTo(alert.RequestId));
+                Assert.That(alertCompleted.Result, Is.EqualTo(AlertResult.Closed));
+                Assert.That(sheetCompleted.RequestId, Is.EqualTo(sheet.RequestId));
+                Assert.That(sheetCompleted.Result.IsCancelled, Is.True);
+                Assert.That(toastDismissed.RequestId, Is.EqualTo(toast.RequestId));
+                Assert.That(toastDismissed.Reason, Is.EqualTo(ToastDismissReason.TimedOut));
+                Assert.That(order, Is.EqualTo(new[]
+                {
+                    "alert-opened",
+                    "alert-callback",
+                    "alert-event"
+                }));
+            }
+            finally
+            {
+                NP.AlertOpened -= onAlertOpened;
+                NP.AlertCompleted -= onAlertCompleted;
+                NP.BottomSheetCompleted -= onSheetCompleted;
+                NP.ToastDismissed -= onToastDismissed;
+            }
+        }
+
+        [Test]
+        public void AlertHandles_DismissActiveAndQueuedRequestsIndependentlyAndOnce()
+        {
+            var results = new List<string>();
+            AlertHandle active = NP.ShowAlert(
+                new AlertOptions { Content = "Active" },
+                result => results.Add("active:" + result));
+            AlertHandle queued = NP.ShowAlert(
+                new AlertOptions { Content = "Queued" },
+                result => results.Add("queued:" + result));
+
+            queued.Dismiss();
+            queued.Dismiss();
+            active.Dismiss();
+            active.Dismiss();
+
+            Assert.That(_strategy.Alerts, Has.Count.EqualTo(1));
+            Assert.That(_strategy.DismissedAlertIds, Is.EqualTo(new[] { active.RequestId }));
+            Assert.That(results, Is.EqualTo(new[]
+            {
+                "queued:Dismissed",
+                "active:Dismissed"
+            }));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void BottomSheetHandle_DismissesOnlyItsRequestAsCancellation()
+        {
+            int firstCount = 0;
+            int secondCount = 0;
+            BottomSheetResult firstResult = default;
+            BottomSheetHandle first = NP.ShowBottomSheet(CreateBottomSheet("first"), result =>
+            {
+                firstCount++;
+                firstResult = result;
+            });
+            BottomSheetHandle second = NP.ShowBottomSheet(
+                CreateBottomSheet("second"),
+                _ => secondCount++);
+
+            first.Dismiss();
+            first.Dismiss();
+            NativePromptCallbackReceiver.BottomSheetActionSelected(second.RequestId, "second");
+            NativePromptCallbackReceiver.BottomSheetCancelled(first.RequestId);
+
+            Assert.That(firstCount, Is.EqualTo(1));
+            Assert.That(firstResult.IsCancelled, Is.True);
+            Assert.That(secondCount, Is.EqualTo(1));
+            Assert.That(_strategy.DismissedBottomSheetIds, Is.EqualTo(new[] { first.RequestId }));
+        }
+
+        [Test]
+        public void CallbackAndEventExceptions_DoNotStopLaterNotificationsOrAlertQueue()
+        {
+            int laterSubscriberCount = 0;
+            int secondAlertCount = 0;
+            EventHandler<AlertCompletedEventArgs> throwing = (_, __) =>
+                throw new InvalidOperationException("event failure");
+            EventHandler<AlertCompletedEventArgs> later = (_, __) => laterSubscriberCount++;
+            NP.AlertCompleted += throwing;
+            NP.AlertCompleted += later;
+            LogAssert.Expect(LogType.Exception, new Regex("callback failure"));
+            LogAssert.Expect(LogType.Exception, new Regex("event failure"));
+            LogAssert.Expect(LogType.Exception, new Regex("event failure"));
+            try
+            {
+                NP.ShowAlert(
+                    new AlertOptions { Content = "First" },
+                    _ => throw new InvalidOperationException("callback failure"));
+                NP.ShowAlert(
+                    new AlertOptions { Content = "Second" },
+                    _ => secondAlertCount++);
+
+                NativePromptCallbackReceiver.AlertCompleted(
+                    _strategy.Alerts[0].RequestId,
+                    AlertResult.Closed);
+                NativePromptCallbackReceiver.AlertCompleted(
+                    _strategy.Alerts[1].RequestId,
+                    AlertResult.Closed);
+
+                Assert.That(laterSubscriberCount, Is.EqualTo(2));
+                Assert.That(secondAlertCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                NP.AlertCompleted -= throwing;
+                NP.AlertCompleted -= later;
+            }
+        }
+
+        [Test]
         public void Toast_NewRequestReplacesCurrentToast()
         {
             var reasons = new List<ToastDismissReason>();
@@ -654,6 +832,10 @@ namespace NativePrompt.Tests
 
             internal List<string> DismissedToastIds { get; } = new List<string>();
 
+            internal List<string> DismissedAlertIds { get; } = new List<string>();
+
+            internal List<string> DismissedBottomSheetIds { get; } = new List<string>();
+
             internal int ResetCount { get; private set; }
 
             internal void ClearResetCount()
@@ -666,9 +848,19 @@ namespace NativePrompt.Tests
                 Alerts.Add(new AlertCall(requestId, options));
             }
 
+            public void DismissAlert(string requestId)
+            {
+                DismissedAlertIds.Add(requestId);
+            }
+
             public void ShowBottomSheet(string requestId, BottomSheetOptions options)
             {
                 BottomSheets.Add(new BottomSheetCall(requestId, options));
+            }
+
+            public void DismissBottomSheet(string requestId)
+            {
+                DismissedBottomSheetIds.Add(requestId);
             }
 
             public void ShowToast(string requestId, ToastOptions options)

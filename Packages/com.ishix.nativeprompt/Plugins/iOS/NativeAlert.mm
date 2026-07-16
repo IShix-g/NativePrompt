@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 
 typedef void (*NativePromptAlertCompletedCallback)(const char *requestId, int result);
+typedef void (*NativePromptAlertOpenedCallback)(const char *requestId);
 
 enum NativePromptAlertResult
 {
@@ -128,6 +129,7 @@ extern "C" void NativePrompt_ShowAlert(
     const char *yesButtonTextValue,
     const char *noButtonTextValue,
     const char *closeButtonTextValue,
+    NativePromptAlertOpenedCallback opened,
     NativePromptAlertCompletedCallback completed)
 {
     NSString *requestId = NativePromptAlertString(requestIdValue) ?: @"";
@@ -191,7 +193,20 @@ extern "C" void NativePrompt_ShowAlert(
             [controller addAction:closeAction];
         }
 
-        [presenter presentViewController:controller animated:YES completion:nil];
+        [presenter presentViewController:controller animated:YES completion:^{
+            if (!state.hasCompleted && opened != NULL)
+            {
+                opened(requestId.UTF8String);
+            }
+        }];
+    });
+}
+
+extern "C" void NativePrompt_DismissAlert(const char *requestIdValue)
+{
+    NSString *requestId = NativePromptAlertString(requestIdValue) ?: @"";
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [NativePromptAlerts()[requestId] dismissWithoutCallback];
     });
 }
 

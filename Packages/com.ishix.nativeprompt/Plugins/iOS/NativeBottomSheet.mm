@@ -3,6 +3,7 @@
 
 typedef void (*NativePromptActionSelectedCallback)(const char *requestId, const char *actionId);
 typedef void (*NativePromptCancelledCallback)(const char *requestId);
+typedef void (*NativePromptBottomSheetOpenedCallback)(const char *requestId);
 
 static const void *NativePromptBottomSheetDelegateKey = &NativePromptBottomSheetDelegateKey;
 
@@ -151,6 +152,7 @@ static NSString *NativePromptOptionalString(id value)
 extern "C" void NativePrompt_ShowBottomSheet(
     const char *requestIdValue,
     const char *payloadValue,
+    NativePromptBottomSheetOpenedCallback opened,
     NativePromptActionSelectedCallback actionSelected,
     NativePromptCancelledCallback cancelled)
 {
@@ -249,6 +251,10 @@ extern "C" void NativePrompt_ShowBottomSheet(
         }
 
         [presenter presentViewController:controller animated:YES completion:^{
+            if (!delegate.completed && opened != NULL)
+            {
+                opened(requestId.UTF8String);
+            }
             UIView *container = controller.presentationController.containerView;
             if (container != nil)
             {
@@ -260,6 +266,22 @@ extern "C" void NativePrompt_ShowBottomSheet(
                 [container addGestureRecognizer:backgroundTap];
             }
         }];
+    });
+}
+
+extern "C" void NativePrompt_DismissBottomSheet(const char *requestIdValue)
+{
+    NSString *requestId = requestIdValue == NULL
+        ? @""
+        : [NSString stringWithUTF8String:requestIdValue];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NativePromptBottomSheetDelegate *delegate = NativePromptBottomSheets()[requestId];
+        if (delegate != nil && !delegate.completed)
+        {
+            delegate.completed = YES;
+            [NativePromptBottomSheets() removeObjectForKey:requestId];
+            [delegate.controller dismissViewControllerAnimated:NO completion:nil];
+        }
     });
 }
 

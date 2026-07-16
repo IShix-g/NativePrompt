@@ -4,7 +4,11 @@ namespace NativePrompt
     {
         void ShowAlert(string requestId, AlertOptions options);
 
+        void DismissAlert(string requestId);
+
         void ShowBottomSheet(string requestId, BottomSheetOptions options);
+
+        void DismissBottomSheet(string requestId);
 
         void ShowToast(string requestId, ToastOptions options);
 

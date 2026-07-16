@@ -18,6 +18,12 @@ namespace NativePrompt
 
         /// <summary>Gets or sets the cancel button text.</summary>
         public string CancelButtonText { get; set; } = "Cancel";
+
+        /// <summary>Gets or sets optional caller-defined metadata describing this prompt.</summary>
+        public string Tag { get; set; }
+
+        /// <summary>Gets or sets optional caller-defined metadata grouping related prompts.</summary>
+        public string GroupId { get; set; }
     }
 
     /// <summary>
@@ -78,5 +84,60 @@ namespace NativePrompt
         {
             return new BottomSheetResult(null, true);
         }
+    }
+
+    /// <summary>Provides manual control and identity information for a bottom sheet.</summary>
+    public sealed class BottomSheetHandle : IPromptHandle
+    {
+        private Action _dismiss;
+
+        internal BottomSheetHandle(string requestId, string tag, string groupId, Action dismiss)
+        {
+            RequestId = requestId;
+            Tag = tag;
+            GroupId = groupId;
+            _dismiss = dismiss ?? throw new ArgumentNullException(nameof(dismiss));
+        }
+
+        /// <inheritdoc />
+        public string RequestId { get; }
+
+        /// <inheritdoc />
+        public string Tag { get; }
+
+        /// <inheritdoc />
+        public string GroupId { get; }
+
+        /// <inheritdoc />
+        public void Dismiss()
+        {
+            System.Threading.Interlocked.Exchange(ref _dismiss, null)?.Invoke();
+        }
+    }
+
+    /// <summary>Provides identity information when a bottom sheet is displayed.</summary>
+    public sealed class BottomSheetOpenedEventArgs : PromptEventArgs
+    {
+        internal BottomSheetOpenedEventArgs(string requestId, string tag, string groupId)
+            : base(requestId, tag, groupId)
+        {
+        }
+    }
+
+    /// <summary>Provides identity and result information when a bottom sheet completes.</summary>
+    public sealed class BottomSheetCompletedEventArgs : PromptEventArgs
+    {
+        internal BottomSheetCompletedEventArgs(
+            string requestId,
+            string tag,
+            string groupId,
+            BottomSheetResult result)
+            : base(requestId, tag, groupId)
+        {
+            Result = result;
+        }
+
+        /// <summary>Gets how the bottom sheet completed.</summary>
+        public BottomSheetResult Result { get; }
     }
 }

@@ -17,7 +17,7 @@ default).
 using NativePrompt;
 using UnityEngine;
 
-NP.ShowAlert(
+AlertHandle alert = NP.ShowAlert(
     new AlertOptions
     {
         Title = "Delete save?",
@@ -26,13 +26,19 @@ NP.ShowAlert(
         NoButtonText = "Keep"
     },
     result => Debug.Log($"Alert result: {result}"));
+
+// Safe to call more than once; only the first call has an effect.
+alert.Dismiss();
 ```
 
-`AlertResult` is `Yes`, `No`, or `Closed`. Alert requests are processed in FIFO
+`AlertResult` is `Yes`, `No`, `Closed`, or `Dismissed`. Alert requests are processed in FIFO
 order. On Android, tapping the backdrop or pressing Back does not dismiss an alert.
 The iOS implementation uses `UIAlertController` with the alert style, Android uses
-the SDK `AlertDialog`, and the Unity Editor uses `EditorUtility.DisplayDialog`.
+the SDK `AlertDialog`, and the Unity Editor uses a non-blocking utility window.
 Each platform keeps its standard theme, typography, and button placement.
+An `AlertHandle` can dismiss either the displayed alert or that specific alert while
+it is waiting in the FIFO queue. A waiting alert dismissed before display does not
+raise `NP.AlertOpened`.
 
 ## Bottom sheet
 
@@ -44,7 +50,7 @@ non-empty `Id` and non-empty `Text`.
 using NativePrompt;
 using UnityEngine;
 
-NP.ShowBottomSheet(
+BottomSheetHandle sheet = NP.ShowBottomSheet(
     new BottomSheetOptions
     {
         Title = "Photo",
@@ -63,11 +69,14 @@ NP.ShowBottomSheet(
     },
     result => Debug.Log(
         result.IsCancelled ? "Cancelled" : $"Selected: {result.ActionId}"));
+
+sheet.Dismiss();
 ```
 
 `BottomSheetAction.Enabled` defaults to `true`, and its `Style` defaults to
 `Default`. A cancelled result has `IsCancelled == true` and `ActionId == null`.
 Background taps and Android Back return a cancelled result.
+Calling `BottomSheetHandle.Dismiss()` also returns the existing cancelled result.
 
 ## Toast
 
@@ -96,6 +105,72 @@ Calling `Dismiss()` more than once is safe. Only one toast is visible; showing a
 toast replaces the current one and completes the old callback with `Replaced`.
 Toast positions account for the platform safe area.
 
+## Handles and identity metadata
+
+`AlertHandle`, `BottomSheetHandle`, and `ToastHandle` implement `IPromptHandle`.
+Every handle exposes a library-generated `RequestId`, the optional `Tag` and
+`GroupId` supplied in its options, and an idempotent `Dismiss()` method.
+
+```csharp
+AlertOptions options = new AlertOptions
+{
+    Content = "Delete this item?",
+    YesButtonText = "Delete",
+    NoButtonText = "Keep",
+    Tag = "delete-confirmation",
+    GroupId = "inventory-screen"
+};
+
+AlertHandle alert = NP.ShowAlert(options);
+Debug.Log($"Request: {alert.RequestId}, tag: {alert.Tag}, group: {alert.GroupId}");
+```
+
+`RequestId` is unique per prompt request and cannot be supplied through options.
+`Tag` and `GroupId` may be duplicated; they are descriptive metadata, not access
+control tokens or uniqueness guarantees. Values are captured by `Show*()`, so later
+changes to the options object do not affect an in-progress prompt.
+
+NativePrompt intentionally has no `DismissAll()`, `DismissByTag()`, or
+`DismissGroup()` API. Keep the handles owned by a screen, operation, or component
+and dismiss those handles when that owner ends. `GroupId` can describe that
+ownership, but does not itself grant control of other prompts.
+
+## Lifecycle events
+
+`NP` exposes type-specific static lifecycle events:
+
+- `AlertOpened` and `AlertCompleted`
+- `BottomSheetOpened` and `BottomSheetCompleted`
+- `ToastShown` and `ToastDismissed`
+
+Opened/shown events occur only after the platform UI is actually displayed.
+Completed/dismissed events cover user interaction, manual dismissal, Toast timeout,
+tap, and replacement. Event args expose the same `RequestId`, `Tag`, and `GroupId`
+as the handle, plus `Result` or `Reason` for completion events.
+
+```csharp
+private void OnEnable()
+{
+    NP.AlertCompleted += OnAlertCompleted;
+}
+
+private void OnDisable()
+{
+    // NP events are static: always unsubscribe with the owner's lifecycle.
+    NP.AlertCompleted -= OnAlertCompleted;
+}
+
+private void OnAlertCompleted(object sender, AlertCompletedEventArgs args)
+{
+    Debug.Log($"{args.RequestId}: {args.Result}");
+}
+```
+
+Individual callbacks and lifecycle events run on the Unity main thread. For a
+completion, NativePrompt invokes the individual callback first and then the static
+event. An exception from one callback or subscriber is logged and does not prevent
+later subscribers, queue advancement, or other completion notifications.
+
 ## Argument validation contract
 
 The runtime implementation validates arguments synchronously before creating a
@@ -116,8 +191,8 @@ main thread.
 
 | Feature | iOS | Android | Unity Editor |
 | --- | --- | --- | --- |
-| Alert | UIKit `UIAlertController` (alert style) | Android SDK `AlertDialog` (not cancelled by backdrop or Back) | `EditorUtility.DisplayDialog` |
-| Bottom sheet | UIKit action sheet | Android SDK `Dialog` and standard views | Logs options, then returns Cancelled |
+| Alert | UIKit `UIAlertController` (alert style) | Android SDK `AlertDialog` (not cancelled by backdrop or Back) | Non-blocking utility window |
+| Bottom sheet | UIKit action sheet | Android SDK `Dialog` and standard views | Non-blocking utility window |
 | Toast | UIKit view overlay | Android standard-view overlay | Logs the message while preserving the callback contract |
 
 Android runtime UI does not depend on Material Components, Compose, or another

@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 
 typedef void (*NativePromptToastDismissedCallback)(const char *requestId, int reason);
+typedef void (*NativePromptToastShownCallback)(const char *requestId);
 
 enum NativePromptToastDismissReason
 {
@@ -118,6 +119,7 @@ extern "C" void NativePrompt_ShowToast(
     bool autoDismiss,
     bool dismissOnTap,
     int position,
+    NativePromptToastShownCallback shown,
     NativePromptToastDismissedCallback dismissed)
 {
     NSString *requestId = requestIdValue == NULL
@@ -190,6 +192,10 @@ extern "C" void NativePrompt_ShowToast(
         state.view = toastView;
         state.dismissed = dismissed;
         NativePromptToasts()[requestId] = state;
+        if (shown != NULL)
+        {
+            shown(requestId.UTF8String);
+        }
 
         if (dismissOnTap)
         {

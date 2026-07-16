@@ -29,6 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class NativeBottomSheet {
     public interface Callback {
+        void onOpened(String requestId);
+
         void onActionSelected(String requestId, String actionId);
 
         void onCancelled(String requestId);
@@ -66,6 +68,20 @@ public final class NativeBottomSheet {
         });
     }
 
+    public static void dismiss(final String requestId) {
+        final Activity activity = UnityPlayer.currentActivity;
+        if (activity == null) {
+            return;
+        }
+
+        activity.runOnUiThread(() -> {
+            State state = STATES.get(requestId);
+            if (state != null) {
+                state.dismissWithoutCallback();
+            }
+        });
+    }
+
     private static void showOnUiThread(
             Activity activity,
             String requestId,
@@ -87,6 +103,7 @@ public final class NativeBottomSheet {
             dialog.setOnCancelListener(ignored -> state.completeCancelled());
             dialog.setOnDismissListener(ignored -> STATES.remove(requestId));
             dialog.show();
+            callback.onOpened(requestId);
 
             Window window = dialog.getWindow();
             if (window == null) {

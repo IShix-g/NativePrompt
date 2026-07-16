@@ -48,6 +48,19 @@ namespace NativePrompt
             }
         }
 
+        public void DismissAlert(string requestId)
+        {
+            lock (_gate)
+            {
+                _alertCallbacks.Remove(requestId);
+            }
+
+            using (var nativeClass = new AndroidJavaClass(NativeAlertClassName))
+            {
+                nativeClass.CallStatic("dismiss", requestId);
+            }
+        }
+
         public void ShowBottomSheet(string requestId, BottomSheetOptions options)
         {
             var callback = new BottomSheetCallbackProxy(this, requestId);
@@ -71,6 +84,19 @@ namespace NativePrompt
             {
                 RemoveCallback(requestId, callback);
                 throw;
+            }
+        }
+
+        public void DismissBottomSheet(string requestId)
+        {
+            lock (_gate)
+            {
+                _bottomSheetCallbacks.Remove(requestId);
+            }
+
+            using (var nativeClass = new AndroidJavaClass(NativeClassName))
+            {
+                nativeClass.CallStatic("dismiss", requestId);
             }
         }
 
@@ -153,6 +179,21 @@ namespace NativePrompt
             }
         }
 
+        private void NotifyBottomSheetOpened(
+            string requestId,
+            BottomSheetCallbackProxy callback)
+        {
+            lock (_gate)
+            {
+                if (!_bottomSheetCallbacks.TryGetValue(requestId, out BottomSheetCallbackProxy current) ||
+                    !ReferenceEquals(current, callback))
+                {
+                    return;
+                }
+            }
+            NativePromptCallbackReceiver.BottomSheetOpened(requestId);
+        }
+
         private void CompleteCancellation(
             string requestId,
             BottomSheetCallbackProxy callback)
@@ -191,6 +232,19 @@ namespace NativePrompt
             }
         }
 
+        private void NotifyToastShown(string requestId, ToastCallbackProxy callback)
+        {
+            lock (_gate)
+            {
+                if (!_toastCallbacks.TryGetValue(requestId, out ToastCallbackProxy current) ||
+                    !ReferenceEquals(current, callback))
+                {
+                    return;
+                }
+            }
+            NativePromptCallbackReceiver.ToastShown(requestId);
+        }
+
         private bool RemoveToastCallback(string requestId, ToastCallbackProxy callback)
         {
             lock (_gate)
@@ -217,6 +271,19 @@ namespace NativePrompt
                     requestId,
                     (AlertResult)result);
             }
+        }
+
+        private void NotifyAlertOpened(string requestId, AlertCallbackProxy callback)
+        {
+            lock (_gate)
+            {
+                if (!_alertCallbacks.TryGetValue(requestId, out AlertCallbackProxy current) ||
+                    !ReferenceEquals(current, callback))
+                {
+                    return;
+                }
+            }
+            NativePromptCallbackReceiver.AlertOpened(requestId);
         }
 
         private bool RemoveAlertCallback(string requestId, AlertCallbackProxy callback)
@@ -256,6 +323,14 @@ namespace NativePrompt
                 }
             }
 
+            public void onOpened(string requestId)
+            {
+                if (requestId == _requestId)
+                {
+                    _owner.NotifyBottomSheetOpened(requestId, this);
+                }
+            }
+
             public void onCancelled(string requestId)
             {
                 if (requestId == _requestId)
@@ -286,6 +361,14 @@ namespace NativePrompt
                     _owner.CompleteToast(requestId, reason, this);
                 }
             }
+
+            public void onShown(string requestId)
+            {
+                if (requestId == _requestId)
+                {
+                    _owner.NotifyToastShown(requestId, this);
+                }
+            }
         }
 
         private sealed class AlertCallbackProxy : AndroidJavaProxy
@@ -307,6 +390,14 @@ namespace NativePrompt
                 if (requestId == _requestId)
                 {
                     _owner.CompleteAlert(requestId, result, this);
+                }
+            }
+
+            public void onOpened(string requestId)
+            {
+                if (requestId == _requestId)
+                {
+                    _owner.NotifyAlertOpened(requestId, this);
                 }
             }
         }

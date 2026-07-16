@@ -23,7 +23,9 @@ namespace NativePrompt
                 NoButtonText = noButtonText,
                 CloseButtonText = yesButtonText == null && noButtonText == null
                     ? OptionalText(options.CloseButtonText) ?? "Close"
-                    : OptionalText(options.CloseButtonText)
+                    : OptionalText(options.CloseButtonText),
+                Tag = options.Tag,
+                GroupId = options.GroupId
             };
         }
 
@@ -76,7 +78,9 @@ namespace NativePrompt
                 Title = OptionalText(options.Title),
                 Content = OptionalText(options.Content),
                 Actions = actions,
-                CancelButtonText = OptionalText(options.CancelButtonText) ?? "Cancel"
+                CancelButtonText = OptionalText(options.CancelButtonText) ?? "Cancel",
+                Tag = options.Tag,
+                GroupId = options.GroupId
             };
         }
 
@@ -101,7 +105,9 @@ namespace NativePrompt
                 Duration = options.Duration,
                 AutoDismiss = options.AutoDismiss,
                 DismissOnTap = options.DismissOnTap,
-                Position = options.Position
+                Position = options.Position,
+                Tag = options.Tag,
+                GroupId = options.GroupId
             };
         }
 

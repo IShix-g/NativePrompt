@@ -14,10 +14,15 @@ namespace NativePrompt
 
         private delegate void AlertCompletedCallback(IntPtr requestId, int result);
 
+        private delegate void OpenedCallback(IntPtr requestId);
+
         private static readonly ActionSelectedCallback ActionSelected = OnActionSelected;
         private static readonly CancelledCallback Cancelled = OnCancelled;
         private static readonly ToastDismissedCallback ToastDismissed = OnToastDismissed;
         private static readonly AlertCompletedCallback AlertCompleted = OnAlertCompleted;
+        private static readonly OpenedCallback AlertOpened = OnAlertOpened;
+        private static readonly OpenedCallback BottomSheetOpened = OnBottomSheetOpened;
+        private static readonly OpenedCallback ToastShown = OnToastShown;
 
         public void ShowAlert(string requestId, AlertOptions options)
         {
@@ -28,7 +33,13 @@ namespace NativePrompt
                 options.YesButtonText,
                 options.NoButtonText,
                 options.CloseButtonText,
+                AlertOpened,
                 AlertCompleted);
+        }
+
+        public void DismissAlert(string requestId)
+        {
+            NativePrompt_DismissAlert(requestId);
         }
 
         public void ShowBottomSheet(string requestId, BottomSheetOptions options)
@@ -36,8 +47,14 @@ namespace NativePrompt
             NativePrompt_ShowBottomSheet(
                 requestId,
                 NativeBottomSheetPayload.ToJson(options),
+                BottomSheetOpened,
                 ActionSelected,
                 Cancelled);
+        }
+
+        public void DismissBottomSheet(string requestId)
+        {
+            NativePrompt_DismissBottomSheet(requestId);
         }
 
         public void ShowToast(string requestId, ToastOptions options)
@@ -49,6 +66,7 @@ namespace NativePrompt
                 options.AutoDismiss,
                 options.DismissOnTap,
                 (int)options.Position,
+                ToastShown,
                 ToastDismissed);
         }
 
@@ -95,12 +113,34 @@ namespace NativePrompt
                 (AlertResult)result);
         }
 
+        [AOT.MonoPInvokeCallback(typeof(OpenedCallback))]
+        private static void OnAlertOpened(IntPtr requestId)
+        {
+            NativePromptCallbackReceiver.AlertOpened(Marshal.PtrToStringUTF8(requestId));
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(OpenedCallback))]
+        private static void OnBottomSheetOpened(IntPtr requestId)
+        {
+            NativePromptCallbackReceiver.BottomSheetOpened(Marshal.PtrToStringUTF8(requestId));
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(OpenedCallback))]
+        private static void OnToastShown(IntPtr requestId)
+        {
+            NativePromptCallbackReceiver.ToastShown(Marshal.PtrToStringUTF8(requestId));
+        }
+
         [DllImport("__Internal")]
         private static extern void NativePrompt_ShowBottomSheet(
             string requestId,
             string payload,
+            OpenedCallback onOpened,
             ActionSelectedCallback onActionSelected,
             CancelledCallback onCancelled);
+
+        [DllImport("__Internal")]
+        private static extern void NativePrompt_DismissBottomSheet(string requestId);
 
         [DllImport("__Internal")]
         private static extern void NativePrompt_ResetBottomSheets();
@@ -113,6 +153,7 @@ namespace NativePrompt
             [MarshalAs(UnmanagedType.I1)] bool autoDismiss,
             [MarshalAs(UnmanagedType.I1)] bool dismissOnTap,
             int position,
+            OpenedCallback onShown,
             ToastDismissedCallback onDismissed);
 
         [DllImport("__Internal")]
@@ -129,7 +170,11 @@ namespace NativePrompt
             string yesButtonText,
             string noButtonText,
             string closeButtonText,
+            OpenedCallback onOpened,
             AlertCompletedCallback onCompleted);
+
+        [DllImport("__Internal")]
+        private static extern void NativePrompt_DismissAlert(string requestId);
 
         [DllImport("__Internal")]
         private static extern void NativePrompt_ResetAlerts();

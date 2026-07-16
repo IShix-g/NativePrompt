@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class NativeAlert {
     public interface Callback {
+        void onOpened(String requestId);
+
         void onCompleted(String requestId, int result);
     }
 
@@ -61,6 +63,20 @@ public final class NativeAlert {
         });
     }
 
+    public static void dismiss(final String requestId) {
+        final Activity activity = UnityPlayer.currentActivity;
+        if (activity == null) {
+            return;
+        }
+
+        activity.runOnUiThread(() -> {
+            State state = STATES.get(requestId);
+            if (state != null) {
+                state.dismissWithoutCallback();
+            }
+        });
+    }
+
     private static void showOnUiThread(
             Activity activity,
             String requestId,
@@ -102,6 +118,7 @@ public final class NativeAlert {
             STATES.put(requestId, state);
             dialog.setOnDismissListener(ignored -> STATES.remove(requestId));
             dialog.show();
+            callback.onOpened(requestId);
         } catch (Exception exception) {
             STATES.remove(requestId);
             callback.onCompleted(requestId, RESULT_CLOSED);

@@ -8,16 +8,16 @@ namespace NativePrompt
         private static readonly object Gate = new object();
         private static NativePromptCoordinator _coordinator;
 
-        internal static void ShowAlert(AlertOptions options, Action<AlertResult> onCompleted)
+        internal static AlertHandle ShowAlert(AlertOptions options, Action<AlertResult> onCompleted)
         {
-            GetCoordinator().ShowAlert(options, onCompleted);
+            return GetCoordinator().ShowAlert(options, onCompleted);
         }
 
-        internal static void ShowBottomSheet(
+        internal static BottomSheetHandle ShowBottomSheet(
             BottomSheetOptions options,
             Action<BottomSheetResult> onCompleted)
         {
-            GetCoordinator().ShowBottomSheet(options, onCompleted);
+            return GetCoordinator().ShowBottomSheet(options, onCompleted);
         }
 
         internal static ToastHandle ShowToast(
@@ -32,14 +32,29 @@ namespace NativePrompt
             GetCurrentCoordinator()?.ReceiveAlert(requestId, result);
         }
 
+        internal static void ReceiveAlertOpened(string requestId)
+        {
+            GetCurrentCoordinator()?.ReceiveAlertOpened(requestId);
+        }
+
         internal static void ReceiveBottomSheet(string requestId, BottomSheetResult result)
         {
             GetCurrentCoordinator()?.ReceiveBottomSheet(requestId, result);
         }
 
+        internal static void ReceiveBottomSheetOpened(string requestId)
+        {
+            GetCurrentCoordinator()?.ReceiveBottomSheetOpened(requestId);
+        }
+
         internal static void ReceiveToast(string requestId, ToastDismissReason reason)
         {
             GetCurrentCoordinator()?.ReceiveToast(requestId, reason);
+        }
+
+        internal static void ReceiveToastShown(string requestId)
+        {
+            GetCurrentCoordinator()?.ReceiveToastShown(requestId);
         }
 
         internal static void Reset()

@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class NativeToast {
     public interface Callback {
+        void onShown(String requestId);
+
         void onDismissed(String requestId, int reason);
     }
 
@@ -122,6 +124,7 @@ public final class NativeToast {
         STATES.put(requestId, state);
         applyInsets(activity, state, position);
         root.addView(toast, params);
+        callback.onShown(requestId);
 
         if (dismissOnTap) {
             toast.setOnClickListener(ignored -> state.complete(REASON_TAPPED));
