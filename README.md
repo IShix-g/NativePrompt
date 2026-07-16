@@ -39,7 +39,7 @@ To install it with Unity Package Manager:
 3. Enter the following URL:
 
 ```text
-https://github.com/IShix-g/NativePrompt.git?path=/Packages/com.ishix.nativeprompt
+https://github.com/IShix-g/NativePrompt.git?path=/Packages/com.ishix.nativeprompt#v1
 ```
 
 You can instead add the package directly to your project's
@@ -48,7 +48,7 @@ You can instead add the package directly to your project's
 ```json
 {
   "dependencies": {
-    "com.ishix.nativeprompt": "https://github.com/IShix-g/NativePrompt.git?path=/Packages/com.ishix.nativeprompt"
+    "com.ishix.nativeprompt": "https://github.com/IShix-g/NativePrompt.git?path=/Packages/com.ishix.nativeprompt#v1"
   }
 }
 ```
