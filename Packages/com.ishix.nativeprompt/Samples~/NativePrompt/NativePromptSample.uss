@@ -1,0 +1,136 @@
+.screen-root {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(9, 14, 27);
+}
+
+.logical-viewport {
+    width: 540px;
+    height: 960px;
+    padding: 40px 48px;
+    background-color: rgb(248, 250, 252);
+    color: rgb(15, 23, 42);
+}
+
+.header {
+    height: 104px;
+    flex-shrink: 0;
+    justify-content: center;
+}
+
+.title {
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: rgb(15, 23, 42);
+}
+
+.subtitle {
+    margin-top: 4px;
+    font-size: 16px;
+    color: rgb(100, 116, 139);
+}
+
+.section {
+    flex-shrink: 0;
+    margin-top: 16px;
+}
+
+.section-title {
+    margin-bottom: 8px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(15, 118, 110);
+}
+
+.button-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.action-button {
+    width: 48%;
+    min-width: 0;
+    max-width: none;
+    height: 52px;
+    flex-shrink: 0;
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 10px;
+    margin-left: 0;
+    padding-right: 0;
+    padding-left: 0;
+    border-radius: 4px;
+    border-width: 0;
+    border-color: rgb(17, 94, 89);
+    background-color: rgb(15, 118, 110);
+    color: white;
+    font-size: 16px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.action-button:hover {
+    border-color: rgb(13, 148, 136);
+    background-color: rgb(13, 148, 136);
+}
+
+.action-button:active {
+    border-color: rgb(17, 94, 89);
+    background-color: rgb(17, 94, 89);
+}
+
+.destructive-button {
+    border-color: rgb(153, 40, 61);
+    background-color: rgb(190, 54, 80);
+}
+
+.destructive-button:hover {
+    border-color: rgb(209, 67, 91);
+    background-color: rgb(209, 67, 91);
+}
+
+.destructive-button:active {
+    border-color: rgb(153, 40, 61);
+    background-color: rgb(153, 40, 61);
+}
+
+.secondary-button {
+    border-color: rgb(51, 65, 85);
+    background-color: rgb(71, 85, 105);
+}
+
+.secondary-button:hover {
+    border-color: rgb(100, 116, 139);
+    background-color: rgb(100, 116, 139);
+}
+
+.secondary-button:active {
+    border-color: rgb(51, 65, 85);
+    background-color: rgb(51, 65, 85);
+}
+
+.result-panel {
+    flex-grow: 1;
+    min-height: 112px;
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgb(203, 213, 225);
+    background-color: rgb(232, 238, 245);
+}
+
+.result-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(71, 85, 105);
+}
+
+.result-value {
+    margin-top: 10px;
+    font-size: 20px;
+    white-space: normal;
+    color: rgb(15, 23, 42);
+}

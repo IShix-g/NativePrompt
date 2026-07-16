@@ -40,6 +40,8 @@ strategies are implemented for v0.1.
 
 ## Sample
 
-Open `Assets/Samples/NativePrompt/NativePromptSample.unity` and enter Play Mode.
-The sample contains Alert, Bottom Sheet, and Toast configurations and displays the
-latest callback result. Run it on iOS or Android to verify native appearance.
+In Package Manager, select **Native Prompt**, open the **Samples** tab, and import
+**Native Prompt Sample**. Open the imported `NativePromptSample.unity` scene and
+enter Play Mode. The sample contains Alert, Bottom Sheet, and Toast configurations
+and displays the latest callback result. Run it on iOS or Android to verify native
+appearance.

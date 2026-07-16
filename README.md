@@ -65,14 +65,17 @@ test results and remaining platform-build verification tracked separately.
 
 ## UI Toolkit sample
 
-Open `Assets/Samples/NativePrompt/NativePromptSample.unity` and enter Play Mode.
+In Package Manager, select **Native Prompt**, open the **Samples** tab, and import
+**Native Prompt Sample**. Open the imported `NativePromptSample.unity` scene and
+enter Play Mode. When working in this repository, the source scene is located at
+`Assets/Samples/NativePrompt/NativePromptSample.unity`.
 The centered 540 x 960 logical viewport provides buttons for every Alert, Bottom
 Sheet, and Toast configuration, including manual Toast dismissal. The most recent
 callback result is displayed in the sample UI.
 
 Use the sample in the Unity Editor for API-flow checks and on iOS or Android for
 native appearance checks. The accompanying PlayMode tests are located at
-`Assets/Samples/NativePrompt/Tests/PlayMode`.
+`Assets/Tests/PlayMode`.
 
 The plugin EditMode tests are located at `Assets/Tests/Editor` so test-only code
 is kept outside the distributable package.
