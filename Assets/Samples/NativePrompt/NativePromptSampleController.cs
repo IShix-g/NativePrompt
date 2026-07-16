@@ -38,6 +38,7 @@ namespace NativePrompt.Samples
 
         private void OnEnable()
         {
+            Application.targetFrameRate = 60;
             _root = GetComponent<UIDocument>().rootVisualElement;
             _logicalViewport = _root.Q<VisualElement>("logical-viewport");
             _resultLabel = _root.Q<Label>("result-value");
