@@ -120,6 +120,7 @@ LoadingHandle loading = NP.ShowLoading(new LoadingOptions
     BackgroundOpacity = 0.5f,
     Position = LoadingPosition.BottomRight,
     Size = LoadingSize.Medium,
+    SpinnerColor = Color.black,
     Message = "Processing...",
     MessageColor = new Color(0.33f, 0.33f, 0.33f, 1f),
     MessageFontSize = 17f,
@@ -133,11 +134,12 @@ loading.Dismiss();
 ```
 
 Defaults are `BlocksInteraction = false`, `ShowsBackground = false`, a white
-background with `0.5` opacity, `BottomRight`, `Medium`, no message, and a `0.25`
-second visual delay. `LoadingPosition` supports `Center`, `TopLeft`, `TopRight`,
+background with `0.5` opacity, `BottomRight`, `Medium`, a black spinner, no message,
+and a `0.25` second visual delay. `LoadingPosition` supports `Center`, `TopLeft`, `TopRight`,
 `BottomLeft`, and `BottomRight`; `LoadingSize` supports `Small`, `Medium`, and
-`Large`. On iOS, `Medium` renders at approximately 25 pt. Whitespace-only messages
-are omitted. When present, the message is centered 8 pt/dp below the spinner and
+`Large`. On iOS, `Medium` renders at approximately 25 pt. `SpinnerColor` accepts a
+Unity `Color`, including alpha, and is applied by both native strategies. Whitespace-only
+messages are omitted. When present, the message is centered 8 pt/dp below the spinner and
 uses `MessageColor`, including its alpha channel. `MessageFontSize` is interpreted
 as pt on iOS and sp on Android. Their defaults are dark gray and `17f`.
 

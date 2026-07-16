@@ -25,6 +25,9 @@ namespace NativePrompt
         /// <summary>Gets or sets the spinner size.</summary>
         public LoadingSize Size { get; set; } = LoadingSize.Medium;
 
+        /// <summary>Gets or sets the spinner color, including its opacity.</summary>
+        public Color SpinnerColor { get; set; } = Color.black;
+
         /// <summary>Gets or sets an optional message displayed below the spinner.</summary>
         public string Message { get; set; }
 

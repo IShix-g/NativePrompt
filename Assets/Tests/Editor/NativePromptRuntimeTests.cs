@@ -76,6 +76,7 @@ namespace NativePrompt.Tests
                 BackgroundOpacity = 0.75f,
                 Position = LoadingPosition.TopLeft,
                 Size = LoadingSize.Large,
+                SpinnerColor = new Color(0.8f, 0.7f, 0.6f, 0.5f),
                 MessageColor = new Color(0.1f, 0.2f, 0.3f, 0.4f),
                 MessageFontSize = 21f,
                 ShowDelaySeconds = 0.5f
@@ -110,6 +111,7 @@ namespace NativePrompt.Tests
             Assert.That(loading.BackgroundOpacity, Is.EqualTo(0.75f));
             Assert.That(loading.Position, Is.EqualTo(LoadingPosition.TopLeft));
             Assert.That(loading.Size, Is.EqualTo(LoadingSize.Large));
+            Assert.That(loading.SpinnerColor, Is.EqualTo(new Color(0.8f, 0.7f, 0.6f, 0.5f)));
             Assert.That(loading.MessageColor, Is.EqualTo(new Color(0.1f, 0.2f, 0.3f, 0.4f)));
             Assert.That(loading.MessageFontSize, Is.EqualTo(21f));
             Assert.That(loading.ShowDelaySeconds, Is.EqualTo(0.5f));
@@ -175,6 +177,7 @@ namespace NativePrompt.Tests
             Assert.That(options.BackgroundOpacity, Is.EqualTo(0.5f));
             Assert.That(options.Position, Is.EqualTo(LoadingPosition.BottomRight));
             Assert.That(options.Size, Is.EqualTo(LoadingSize.Medium));
+            Assert.That(options.SpinnerColor, Is.EqualTo(Color.black));
             Assert.That(options.Message, Is.Null);
             Assert.That(options.MessageColor, Is.EqualTo(new Color(0.33f, 0.33f, 0.33f, 1f)));
             Assert.That(options.MessageFontSize, Is.EqualTo(17f));

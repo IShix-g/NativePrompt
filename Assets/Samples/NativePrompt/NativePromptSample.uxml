@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/Samples/NativePrompt/NativePromptSample.uss?fileID=7433441132597879392&amp;guid=1fc6912061484d8bb515b603fd9c0388&amp;type=3#NativePromptSample" />
-    <ui:VisualElement name="screen-root" class="screen-root">
+    <ui:VisualElement name="screen-root" class="screen-root" style="background-color: rgb(255, 255, 255);">
         <ui:VisualElement name="logical-viewport" class="logical-viewport">
             <ui:VisualElement class="header">
                 <ui:Label text="Native Prompt" class="title" />

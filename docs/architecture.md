@@ -90,6 +90,10 @@ Every `ShowLoading` adds a request and applies its normalized options to the one
 native loading hierarchy. Ending a non-current request only removes that request.
 Ending the current request either reapplies the next-newest options or removes the
 hierarchy when no requests remain. Loading has no native-to-managed callback path.
+Loading defaults, including spinner and message colors, are defined once by
+`LoadingOptions`. Platform strategies receive the same normalized values and only
+translate them to UIKit or Android view APIs; native implementations do not select
+their own fallback colors.
 
 ## Native callback contract
 
@@ -115,6 +119,6 @@ been consumed, and invokes it once. Platform strategies must not bypass this pat
   window, view controller, activity, or dialog. Its input blocker is active before
   delayed visuals, and native monotonic timers make delay independent of Unity time.
 
-Native UI visual details remain platform-owned. Public results, queue behavior,
+Native UI rendering mechanics remain platform-owned. Public options, results, queue behavior,
 replacement behavior, callback threading, and callback cardinality remain shared
 runtime responsibilities.

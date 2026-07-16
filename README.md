@@ -313,6 +313,8 @@ public sealed class NativeToastExample : MonoBehaviour
 
 ## Native Loading
 
+![Native Loading](docs/images/native-loading.jpg)
+
 Use a loading overlay for work that has no native completion result. Keep the
 returned handle and end the request from every success, failure, and cancellation
 path.
@@ -335,6 +337,7 @@ public sealed class NativeLoadingExample : MonoBehaviour
             BackgroundOpacity = 0.5f,
             Position = LoadingPosition.Center,
             Size = LoadingSize.Medium,
+            SpinnerColor = Color.black,
             Message = "Processing...",
             MessageColor = new Color(0.33f, 0.33f, 0.33f, 1f),
             MessageFontSize = 17f,
@@ -356,7 +359,8 @@ begins immediately, while the background, spinner, and optional message appear
 together after `ShowDelaySeconds`. Ending a request during the delay prevents its
 visual elements from appearing. Five safe-area-aware positions and three native
 spinner sizes are available. On iOS, `Medium` renders at approximately 25 pt.
-When present, the message is centered below the spinner with native spacing and
+`SpinnerColor` is a shared Unity `Color` setting with a black default on both
+platforms. When present, the message is centered below the spinner with native spacing and
 uses configurable Unity `Color` (including alpha) and font size. Font size is
 interpreted as pt on iOS and sp on Android; the defaults are dark gray and 17.
 

@@ -159,6 +159,7 @@ namespace NativePrompt
                 BackgroundOpacity = options.BackgroundOpacity,
                 Position = options.Position,
                 Size = options.Size,
+                SpinnerColor = options.SpinnerColor,
                 Message = OptionalText(options.Message),
                 MessageColor = options.MessageColor,
                 MessageFontSize = options.MessageFontSize,

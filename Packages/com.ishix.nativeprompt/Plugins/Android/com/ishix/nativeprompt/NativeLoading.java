@@ -2,6 +2,7 @@ package com.ishix.nativeprompt;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Handler;
@@ -44,6 +45,10 @@ public final class NativeLoading {
             final float backgroundGreen,
             final float backgroundBlue,
             final float backgroundOpacity,
+            final float spinnerRed,
+            final float spinnerGreen,
+            final float spinnerBlue,
+            final float spinnerAlpha,
             final float messageRed,
             final float messageGreen,
             final float messageBlue,
@@ -67,6 +72,10 @@ public final class NativeLoading {
                 backgroundGreen,
                 backgroundBlue,
                 backgroundOpacity,
+                spinnerRed,
+                spinnerGreen,
+                spinnerBlue,
+                spinnerAlpha,
                 messageRed,
                 messageGreen,
                 messageBlue,
@@ -105,6 +114,10 @@ public final class NativeLoading {
             float backgroundGreen,
             float backgroundBlue,
             float backgroundOpacity,
+            float spinnerRed,
+            float spinnerGreen,
+            float spinnerBlue,
+            float spinnerAlpha,
             float messageRed,
             float messageGreen,
             float messageBlue,
@@ -134,6 +147,10 @@ public final class NativeLoading {
                 backgroundGreen,
                 backgroundBlue,
                 backgroundOpacity,
+                spinnerRed,
+                spinnerGreen,
+                spinnerBlue,
+                spinnerAlpha,
                 messageRed,
                 messageGreen,
                 messageBlue,
@@ -193,6 +210,10 @@ public final class NativeLoading {
                 float backgroundGreen,
                 float backgroundBlue,
                 float backgroundOpacity,
+                float spinnerRed,
+                float spinnerGreen,
+                float spinnerBlue,
+                float spinnerAlpha,
                 float messageRed,
                 float messageGreen,
                 float messageBlue,
@@ -219,6 +240,10 @@ public final class NativeLoading {
             }
             content = createContent(
                     message,
+                    spinnerRed,
+                    spinnerGreen,
+                    spinnerBlue,
+                    spinnerAlpha,
                     messageRed,
                     messageGreen,
                     messageBlue,
@@ -249,6 +274,10 @@ public final class NativeLoading {
 
         private LinearLayout createContent(
                 String message,
+                float spinnerRed,
+                float spinnerGreen,
+                float spinnerBlue,
+                float spinnerAlpha,
                 float messageRed,
                 float messageGreen,
                 float messageBlue,
@@ -266,6 +295,11 @@ public final class NativeLoading {
                             : android.R.attr.progressBarStyle;
             ProgressBar spinner = new ProgressBar(activity, null, progressStyle);
             spinner.setIndeterminate(true);
+            spinner.setIndeterminateTintList(ColorStateList.valueOf(Color.argb(
+                    colorComponent(spinnerAlpha),
+                    colorComponent(spinnerRed),
+                    colorComponent(spinnerGreen),
+                    colorComponent(spinnerBlue))));
             group.addView(spinner, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT));

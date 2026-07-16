@@ -95,7 +95,9 @@ temporary caller script when checking those combinations.
 1. Check `Center`, `TopLeft`, `TopRight`, `BottomLeft`, and `BottomRight` in portrait
    and landscape. Corners must remain inside the iOS Safe Area or Android system-bar
    insets with visible internal spacing.
-2. Check `Small`, `Medium`, and `Large`. Only the spinner changes size.
+2. Check `Small`, `Medium`, and `Large`. Only the spinner changes size. Confirm the
+   default spinner is black on both platforms, then set a custom `SpinnerColor`
+   including alpha and confirm both native strategies apply it.
 3. Check a null/whitespace message and a long message. No empty label should appear,
    and long text must remain within the safe area. Set `MessageColor` with a visible
    alpha value and try multiple `MessageFontSize` values; iOS must use pt and Android

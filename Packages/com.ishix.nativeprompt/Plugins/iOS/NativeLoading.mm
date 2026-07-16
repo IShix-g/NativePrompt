@@ -39,6 +39,10 @@
            backgroundGreen:(CGFloat)backgroundGreen
             backgroundBlue:(CGFloat)backgroundBlue
          backgroundOpacity:(CGFloat)backgroundOpacity
+                spinnerRed:(CGFloat)spinnerRed
+              spinnerGreen:(CGFloat)spinnerGreen
+               spinnerBlue:(CGFloat)spinnerBlue
+              spinnerAlpha:(CGFloat)spinnerAlpha
                 messageRed:(CGFloat)messageRed
               messageGreen:(CGFloat)messageGreen
                messageBlue:(CGFloat)messageBlue
@@ -123,6 +127,10 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
            backgroundGreen:(CGFloat)backgroundGreen
             backgroundBlue:(CGFloat)backgroundBlue
          backgroundOpacity:(CGFloat)backgroundOpacity
+                spinnerRed:(CGFloat)spinnerRed
+              spinnerGreen:(CGFloat)spinnerGreen
+               spinnerBlue:(CGFloat)spinnerBlue
+              spinnerAlpha:(CGFloat)spinnerAlpha
                 messageRed:(CGFloat)messageRed
               messageGreen:(CGFloat)messageGreen
                messageBlue:(CGFloat)messageBlue
@@ -156,7 +164,11 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
         initWithActivityIndicatorStyle:indicatorStyle];
     indicator.translatesAutoresizingMaskIntoConstraints = NO;
     indicator.userInteractionEnabled = NO;
-    indicator.color = UIColor.blackColor;
+    indicator.color = [UIColor
+        colorWithRed:fmin(fmax(spinnerRed, 0.0), 1.0)
+        green:fmin(fmax(spinnerGreen, 0.0), 1.0)
+        blue:fmin(fmax(spinnerBlue, 0.0), 1.0)
+        alpha:fmin(fmax(spinnerAlpha, 0.0), 1.0)];
     if (size == 0)
     {
         indicator.transform = CGAffineTransformMakeScale(0.75, 0.75);
@@ -280,6 +292,10 @@ extern "C" void NativePrompt_ShowLoading(
     float backgroundGreen,
     float backgroundBlue,
     float backgroundOpacity,
+    float spinnerRed,
+    float spinnerGreen,
+    float spinnerBlue,
+    float spinnerAlpha,
     float messageRed,
     float messageGreen,
     float messageBlue,
@@ -318,6 +334,10 @@ extern "C" void NativePrompt_ShowLoading(
             backgroundGreen:backgroundGreen
             backgroundBlue:backgroundBlue
             backgroundOpacity:backgroundOpacity
+            spinnerRed:spinnerRed
+            spinnerGreen:spinnerGreen
+            spinnerBlue:spinnerBlue
+            spinnerAlpha:spinnerAlpha
             messageRed:messageRed
             messageGreen:messageGreen
             messageBlue:messageBlue
