@@ -303,11 +303,11 @@ namespace NativePrompt.Samples
                 ShowsBackground = true,
                 BackgroundColor = new Color(0.85f, 0.93f, 1f),
                 BackgroundOpacity = 0.65f,
-                Position = LoadingPosition.TopLeft,
+                Position = LoadingPosition.Center,
                 Size = LoadingSize.Medium,
                 Message = "Loading with pass-through background",
                 ShowDelaySeconds = 0.25f
-            }, "Loading: background, pass-through");
+            }, "Loading: centered background, pass-through");
         }
 
         private void ShowBlockingLoading()
@@ -330,11 +330,11 @@ namespace NativePrompt.Samples
                 ShowsBackground = true,
                 BackgroundColor = Color.white,
                 BackgroundOpacity = 0.5f,
-                Position = LoadingPosition.BottomRight,
+                Position = LoadingPosition.Center,
                 Size = LoadingSize.Medium,
                 Message = "Processing...",
                 ShowDelaySeconds = 0.25f
-            }, "Loading: background and blocker");
+            }, "Loading: centered background and blocker");
         }
 
         private void ShowLoading(LoadingOptions options, string result)

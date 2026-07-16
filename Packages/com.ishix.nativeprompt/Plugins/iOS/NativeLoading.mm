@@ -146,10 +146,14 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
         initWithActivityIndicatorStyle:indicatorStyle];
     indicator.translatesAutoresizingMaskIntoConstraints = NO;
     indicator.userInteractionEnabled = NO;
-    indicator.color = UIColor.systemBlueColor;
+    indicator.color = UIColor.blackColor;
     if (size == 0)
     {
         indicator.transform = CGAffineTransformMakeScale(0.75, 0.75);
+    }
+    else if (size == 1)
+    {
+        indicator.transform = CGAffineTransformMakeScale(1.25, 1.25);
     }
     [indicator startAnimating];
 
