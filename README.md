@@ -1,3 +1,5 @@
+![Unity](https://img.shields.io/badge/Unity-6000.0%2B-black)
+
 # Native Prompt
 
 Native Prompt is a native UI plugin for Unity. It displays platform-native alerts,
