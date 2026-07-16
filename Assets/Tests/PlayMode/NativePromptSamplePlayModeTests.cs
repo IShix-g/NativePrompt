@@ -157,6 +157,33 @@ namespace NativePrompt.Samples.Tests
         }
 
         [UnityTest]
+        public IEnumerator LoadingLifecycleEventsAppearInResultArea()
+        {
+            NativePromptSampleController controller =
+                Object.FindFirstObjectByType<NativePromptSampleController>();
+            Label result = controller.GetComponent<UIDocument>()
+                .rootVisualElement.Q<Label>("result-value");
+            LoadingHandle loading = NP.ShowLoading(new LoadingOptions
+            {
+                ShowDelaySeconds = 10f,
+                Tag = "playmode-event",
+                GroupId = "sample-test"
+            });
+            yield return null;
+
+            Assert.That(result.text, Does.StartWith("LoadingStarted"));
+            Assert.That(result.text, Does.Contain("active=1"));
+            Assert.That(result.text, Does.Contain("tag=playmode-event"));
+            Assert.That(result.text, Does.Contain("group=sample-test"));
+
+            loading.Dismiss();
+            yield return null;
+
+            Assert.That(result.text, Does.StartWith("LoadingEnded · Dismissed"));
+            Assert.That(result.text, Does.Contain("active=0"));
+        }
+
+        [UnityTest]
         public IEnumerator DestroyingOwnerSilentlyDisposesPrompt()
         {
             var ownerObject = new GameObject("Prompt owner");

@@ -11,14 +11,16 @@ namespace NativePrompt
         private readonly object _gate = new object();
         private Action _dismiss;
         private Action _dispose;
+        private Action _cancel;
         private CancellationTokenRegistration _registration;
         private bool _hasRegistration;
         private State _state;
 
-        internal PromptHandleLifetime(Action dismiss, Action dispose)
+        internal PromptHandleLifetime(Action dismiss, Action dispose, Action cancel = null)
         {
             _dismiss = dismiss ?? throw new ArgumentNullException(nameof(dismiss));
             _dispose = dispose ?? throw new ArgumentNullException(nameof(dispose));
+            _cancel = cancel ?? dispose;
         }
 
         internal void Dismiss()
@@ -63,8 +65,9 @@ namespace NativePrompt
 
                 _state = State.Disposed;
                 _dismiss = null;
-                dispose = _dispose;
+                dispose = fromCancellation ? _cancel : _dispose;
                 _dispose = null;
+                _cancel = null;
                 hasRegistration = TakeRegistration(out registration);
             }
 
@@ -137,6 +140,7 @@ namespace NativePrompt
                 _state = State.Completed;
                 _dismiss = null;
                 _dispose = null;
+                _cancel = null;
                 hasRegistration = TakeRegistration(out registration);
             }
 

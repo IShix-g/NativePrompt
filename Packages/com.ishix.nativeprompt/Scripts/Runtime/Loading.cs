@@ -79,6 +79,61 @@ namespace NativePrompt
         Large
     }
 
+    /// <summary>Identifies why a loading request ended.</summary>
+    public enum LoadingEndReason
+    {
+        /// <summary>The request was explicitly ended through <see cref="LoadingHandle.Dismiss"/>.</summary>
+        Dismissed,
+
+        /// <summary>The request was ended through <see cref="LoadingHandle.Dispose"/>.</summary>
+        Disposed,
+
+        /// <summary>The request's lifetime owner was cancelled.</summary>
+        Cancelled,
+
+        /// <summary>The NativePrompt runtime was reset.</summary>
+        Reset
+    }
+
+    /// <summary>Provides information about a loading request that has started.</summary>
+    public sealed class LoadingStartedEventArgs : PromptEventArgs
+    {
+        internal LoadingStartedEventArgs(
+            string requestId,
+            string tag,
+            string groupId,
+            int activeCount)
+            : base(requestId, tag, groupId)
+        {
+            ActiveCount = activeCount;
+        }
+
+        /// <summary>Gets the number of active loading requests after this request started.</summary>
+        public int ActiveCount { get; }
+    }
+
+    /// <summary>Provides information about a loading request that has ended.</summary>
+    public sealed class LoadingEndedEventArgs : PromptEventArgs
+    {
+        internal LoadingEndedEventArgs(
+            string requestId,
+            string tag,
+            string groupId,
+            int activeCount,
+            LoadingEndReason reason)
+            : base(requestId, tag, groupId)
+        {
+            ActiveCount = activeCount;
+            Reason = reason;
+        }
+
+        /// <summary>Gets the number of active loading requests after this request ended.</summary>
+        public int ActiveCount { get; }
+
+        /// <summary>Gets why this loading request ended.</summary>
+        public LoadingEndReason Reason { get; }
+    }
+
     /// <summary>Provides request-scoped control over a loading overlay.</summary>
     public sealed class LoadingHandle : IPromptHandle
     {

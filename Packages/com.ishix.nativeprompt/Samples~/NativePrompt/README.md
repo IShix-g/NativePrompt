@@ -2,8 +2,9 @@
 
 Open `NativePromptSample.unity` and enter Play Mode. The centered 540 × 960
 logical viewport exposes representative Alert, Bottom Sheet, Toast, and Loading scenarios
-for manual Editor or device verification. The latest callback result appears in
-the `LATEST RESULT` panel.
+for manual Editor or device verification. The latest callback or Loading lifecycle
+event appears in the `LATEST RESULT` panel. Loading events also write their full
+request ID, metadata, end reason, and active-request count to the Unity Console.
 
 The compact Loading selector shows `S` / `M` / `L` and the representative positions
 `TL` / `C` / `BR` in one row. It starts with no selection and no Loading. Selecting

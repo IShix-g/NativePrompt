@@ -55,10 +55,11 @@ The shared runtime coordinator is responsible for:
 
 Each public handle owns a cancellation-token registration independently from the
 platform strategy. `AddTo(MonoBehaviour)` registers the owner's
-`destroyCancellationToken`; cancellation enters the same request-scoped silent
-dispose path as `IDisposable.Dispose()`. Normal completion, manual-dismiss delivery,
-silent disposal, and runtime reset all unregister the token and release request
-callbacks and options.
+`destroyCancellationToken`; cancellation enters the request-scoped removal path.
+Normal completion, manual-dismiss delivery, disposal, cancellation, and runtime reset
+all unregister the token and release request callbacks and options. Non-Loading result
+callbacks and completion events remain suppressed by disposal; Loading reports the
+removal through `LoadingEnded` with a distinct reason.
 
 Silent disposal removes only its request from the active slot, Alert FIFO queue, or
 pending main-thread delivery set. It suppresses individual and static completion
@@ -90,6 +91,11 @@ Every `ShowLoading` adds a request and applies its normalized options to the one
 native loading hierarchy. Ending a non-current request only removes that request.
 Ending the current request either reapplies the next-newest options or removes the
 hierarchy when no requests remain. Loading has no native-to-managed callback path.
+The coordinator emits `LoadingStarted` after strategy startup succeeds and emits
+`LoadingEnded` exactly once when each request leaves the list. These are managed
+request-lifecycle events, so they do not claim that delayed native visuals appeared.
+Both include the active-request count snapshot; Reset reports every removed request
+with a zero count.
 Loading defaults, including spinner and message colors, are defined once by
 `LoadingOptions`. Platform strategies receive the same normalized values and only
 translate them to UIKit or Android view APIs; native implementations do not select

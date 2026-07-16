@@ -275,6 +275,157 @@ namespace NativePrompt.Tests
             Assert.That(_strategy.DismissedLoadingIds, Has.Count.EqualTo(2));
         }
 
+        [Test]
+        public void LoadingLifecycleEvents_ReportMetadataCountsAndEndReasonsOnce()
+        {
+            var started = new List<LoadingStartedEventArgs>();
+            var ended = new List<LoadingEndedEventArgs>();
+            EventHandler<LoadingStartedEventArgs> onStarted = (_, args) => started.Add(args);
+            EventHandler<LoadingEndedEventArgs> onEnded = (_, args) => ended.Add(args);
+            NP.LoadingStarted += onStarted;
+            NP.LoadingEnded += onEnded;
+            try
+            {
+                LoadingHandle first = NP.ShowLoading(new LoadingOptions
+                {
+                    Tag = "first-tag",
+                    GroupId = "purchase"
+                });
+                LoadingHandle second = NP.ShowLoading(new LoadingOptions
+                {
+                    Tag = "second-tag",
+                    GroupId = "purchase"
+                });
+
+                Assert.That(started, Has.Count.EqualTo(2));
+                Assert.That(started[0].RequestId, Is.EqualTo(first.RequestId));
+                Assert.That(started[0].Tag, Is.EqualTo("first-tag"));
+                Assert.That(started[0].GroupId, Is.EqualTo("purchase"));
+                Assert.That(started[0].ActiveCount, Is.EqualTo(1));
+                Assert.That(started[1].RequestId, Is.EqualTo(second.RequestId));
+                Assert.That(started[1].ActiveCount, Is.EqualTo(2));
+
+                second.Dismiss();
+                second.Dismiss();
+                first.Dispose();
+                first.Dispose();
+
+                Assert.That(started, Has.Count.EqualTo(2),
+                    "Restoring an older request must not report another start.");
+                Assert.That(ended, Has.Count.EqualTo(2));
+                Assert.That(ended[0].RequestId, Is.EqualTo(second.RequestId));
+                Assert.That(ended[0].Tag, Is.EqualTo("second-tag"));
+                Assert.That(ended[0].GroupId, Is.EqualTo("purchase"));
+                Assert.That(ended[0].Reason, Is.EqualTo(LoadingEndReason.Dismissed));
+                Assert.That(ended[0].ActiveCount, Is.EqualTo(1));
+                Assert.That(ended[1].RequestId, Is.EqualTo(first.RequestId));
+                Assert.That(ended[1].Reason, Is.EqualTo(LoadingEndReason.Disposed));
+                Assert.That(ended[1].ActiveCount, Is.Zero);
+            }
+            finally
+            {
+                NP.LoadingStarted -= onStarted;
+                NP.LoadingEnded -= onEnded;
+            }
+        }
+
+        [Test]
+        public void LoadingLifecycleEvent_CancellationReportsCancelled()
+        {
+            var cancellation = new CancellationTokenSource();
+            LoadingEndedEventArgs ended = null;
+            EventHandler<LoadingEndedEventArgs> onEnded = (_, args) => ended = args;
+            NP.LoadingEnded += onEnded;
+            try
+            {
+                LoadingHandle loading = NP.ShowLoading(new LoadingOptions());
+                loading.AddTo(cancellation.Token);
+
+                cancellation.Cancel();
+
+                Assert.That(ended, Is.Not.Null);
+                Assert.That(ended.RequestId, Is.EqualTo(loading.RequestId));
+                Assert.That(ended.Reason, Is.EqualTo(LoadingEndReason.Cancelled));
+                Assert.That(ended.ActiveCount, Is.Zero);
+            }
+            finally
+            {
+                NP.LoadingEnded -= onEnded;
+                cancellation.Dispose();
+            }
+        }
+
+        [Test]
+        public void LoadingLifecycleEvents_ResetPreservesQueuedStartEndOrder()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            var order = new List<string>();
+            var ended = new List<LoadingEndedEventArgs>();
+            EventHandler<LoadingStartedEventArgs> onStarted = (_, args) =>
+                order.Add("start:" + args.Tag + ":" + args.ActiveCount);
+            EventHandler<LoadingEndedEventArgs> onEnded = (_, args) =>
+            {
+                order.Add("end:" + args.Tag + ":" + args.ActiveCount);
+                ended.Add(args);
+            };
+            NP.LoadingStarted += onStarted;
+            NP.LoadingEnded += onEnded;
+            try
+            {
+                NP.ShowLoading(new LoadingOptions { Tag = "first" });
+                NP.ShowLoading(new LoadingOptions { Tag = "second" });
+                NativePromptRuntime.Reset();
+
+                Assert.That(order, Is.Empty);
+                Assert.That(queuedDispatcher.Count, Is.EqualTo(4));
+                queuedDispatcher.Drain();
+
+                Assert.That(order, Is.EqualTo(new[]
+                {
+                    "start:first:1",
+                    "start:second:2",
+                    "end:first:0",
+                    "end:second:0"
+                }));
+                Assert.That(ended, Has.Count.EqualTo(2));
+                Assert.That(ended[0].Reason, Is.EqualTo(LoadingEndReason.Reset));
+                Assert.That(ended[1].Reason, Is.EqualTo(LoadingEndReason.Reset));
+            }
+            finally
+            {
+                NP.LoadingStarted -= onStarted;
+                NP.LoadingEnded -= onEnded;
+            }
+        }
+
+        [Test]
+        public void LoadingLifecycleEvents_ShowFailureReportsNeitherStartNorEnd()
+        {
+            int startedCount = 0;
+            int endedCount = 0;
+            EventHandler<LoadingStartedEventArgs> onStarted = (_, __) => startedCount++;
+            EventHandler<LoadingEndedEventArgs> onEnded = (_, __) => endedCount++;
+            NP.LoadingStarted += onStarted;
+            NP.LoadingEnded += onEnded;
+            try
+            {
+                _strategy.NextShowLoadingException = new InvalidOperationException("failure");
+
+                Assert.Throws<InvalidOperationException>(() =>
+                    NP.ShowLoading(new LoadingOptions()));
+
+                Assert.That(startedCount, Is.Zero);
+                Assert.That(endedCount, Is.Zero);
+            }
+            finally
+            {
+                NP.LoadingStarted -= onStarted;
+                NP.LoadingEnded -= onEnded;
+            }
+        }
+
         [UnityTest]
         public IEnumerator EditorLoading_LogsOnlyAfterUnscaledDelay()
         {

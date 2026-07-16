@@ -182,12 +182,15 @@ namespace NativePrompt
         {
             var request = new LoadingRequest(NextRequestId("loading"), options);
             var lifetime = new PromptHandleLifetime(
-                () => EndLoading(request),
-                () => EndLoading(request));
+                () => EndLoading(request, LoadingEndReason.Dismissed),
+                () => EndLoading(request, LoadingEndReason.Disposed),
+                () => EndLoading(request, LoadingEndReason.Cancelled));
             request.Lifetime = lifetime;
+            int activeCount;
             lock (_gate)
             {
                 _loadings.Add(request);
+                activeCount = _loadings.Count;
             }
 
             try
@@ -217,6 +220,8 @@ namespace NativePrompt
                 }
                 throw;
             }
+
+            PostLoadingStarted(request, activeCount);
 
             return new LoadingHandle(
                 request.RequestId,
@@ -330,6 +335,7 @@ namespace NativePrompt
         internal void Reset()
         {
             var requests = new HashSet<PromptRequest>();
+            var loadingRequests = new List<LoadingRequest>();
             lock (_gate)
             {
                 if (_activeAlert != null)
@@ -356,6 +362,7 @@ namespace NativePrompt
                 {
                     request.Cancelled = true;
                     requests.Add(request);
+                    loadingRequests.Add(request);
                 }
                 foreach (PromptRequest request in _pendingDeliveries)
                 {
@@ -374,6 +381,10 @@ namespace NativePrompt
             foreach (PromptRequest request in requests)
             {
                 ReleaseRequest(request);
+            }
+            foreach (LoadingRequest request in loadingRequests)
+            {
+                PostLoadingEnded(request, LoadingEndReason.Reset, 0);
             }
             _strategy.Reset();
         }
@@ -617,10 +628,11 @@ namespace NativePrompt
             }
         }
 
-        private void EndLoading(LoadingRequest request)
+        private void EndLoading(LoadingRequest request, LoadingEndReason reason)
         {
             LoadingRequest replacement = null;
             bool wasActive;
+            int activeCount;
             lock (_gate)
             {
                 int index = _loadings.IndexOf(request);
@@ -633,6 +645,7 @@ namespace NativePrompt
                 _loadings.RemoveAt(index);
                 request.Completed = true;
                 request.Cancelled = true;
+                activeCount = _loadings.Count;
                 if (wasActive && _loadings.Count > 0)
                 {
                     replacement = _loadings[_loadings.Count - 1];
@@ -640,20 +653,44 @@ namespace NativePrompt
             }
 
             ReleaseRequest(request);
-            if (!wasActive)
+            if (wasActive)
             {
-                return;
+                if (replacement == null)
+                {
+                    TryPlatformAction(() => _strategy.DismissLoading(request.RequestId));
+                }
+                else
+                {
+                    TryPlatformAction(() =>
+                        _strategy.ShowLoading(replacement.RequestId, replacement.Options));
+                }
             }
 
-            if (replacement == null)
-            {
-                TryPlatformAction(() => _strategy.DismissLoading(request.RequestId));
-            }
-            else
-            {
-                TryPlatformAction(() =>
-                    _strategy.ShowLoading(replacement.RequestId, replacement.Options));
-            }
+            PostLoadingEnded(request, reason, activeCount);
+        }
+
+        private void PostLoadingStarted(LoadingRequest request, int activeCount)
+        {
+            var args = new LoadingStartedEventArgs(
+                request.RequestId,
+                request.Tag,
+                request.GroupId,
+                activeCount);
+            _dispatcher.Post(() => NP.RaiseLoadingStarted(args));
+        }
+
+        private void PostLoadingEnded(
+            LoadingRequest request,
+            LoadingEndReason reason,
+            int activeCount)
+        {
+            var args = new LoadingEndedEventArgs(
+                request.RequestId,
+                request.Tag,
+                request.GroupId,
+                activeCount,
+                reason);
+            _dispatcher.Post(() => NP.RaiseLoadingEnded(args));
         }
 
         private void PostAlertCompletion(AlertRequest request, AlertResult result)

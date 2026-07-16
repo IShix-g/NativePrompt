@@ -367,8 +367,8 @@ interpreted as pt on iOS and sp on Android; the defaults are dark gray and 17.
 Multiple loading handles may coexist. The newest active handle supplies the visible
 options; ending it restores the next-newest request. The native layer keeps only one
 loading view hierarchy. `Dismiss()` and `Dispose()` both end only their own loading
-request and are idempotent. Loading intentionally has no completion callback or
-lifecycle event.
+request and are idempotent. Loading has no completion result or per-request callback;
+use `NP.LoadingStarted` and `NP.LoadingEnded` to observe its request lifecycle.
 
 ## Prompt Handles & Lifecycle Events
 
@@ -376,11 +376,12 @@ Every `Show*()` method returns a prompt-specific handle: `AlertHandle`,
 `BottomSheetHandle`, `ToastHandle`, or `LoadingHandle`. All four implement `IPromptHandle` and
 `IDisposable`. Calling `Dismiss()` closes the prompt and reports its normal
 type-specific dismissal result to the individual callback and static completion
-event. Calling `Dispose()` silently removes the prompt without either notification.
-Both operations are idempotent.
+event. Calling `Dispose()` suppresses those result notifications. Both operations
+are idempotent.
 
 Loading has no result notification, so `LoadingHandle.Dismiss()` and `Dispose()`
-have the same request-scoped effect.
+have the same request-scoped effect. They do differ in the `LoadingEndedEventArgs.Reason`
+reported by the Loading lifecycle event.
 
 Use `AddTo(this)` when a prompt belongs to a `MonoBehaviour`. It returns the same
 handle and silently disposes the prompt when that component or its GameObject is
@@ -406,8 +407,9 @@ Each handle exposes a unique, library-generated `RequestId` and the optional `Ta
 and `GroupId` copied from its options. Tags and group IDs may be duplicated; use
 them as descriptive metadata, not as access-control or uniqueness guarantees.
 
-`NP` also provides six static lifecycle events: `AlertOpened`, `AlertCompleted`,
-`BottomSheetOpened`, `BottomSheetCompleted`, `ToastShown`, and `ToastDismissed`.
+`NP` also provides eight static lifecycle events: `AlertOpened`, `AlertCompleted`,
+`BottomSheetOpened`, `BottomSheetCompleted`, `ToastShown`, `ToastDismissed`,
+`LoadingStarted`, and `LoadingEnded`.
 Subscribe and unsubscribe with the owning component's lifecycle:
 
 ```csharp
@@ -455,9 +457,13 @@ public sealed class PromptLifecycleExample : MonoBehaviour
 }
 ```
 
-Opened or shown events fire when the platform UI is actually displayed. Completed
-or dismissed events fire once for every completion path. For the full lifecycle,
-ordering, ownership, and metadata contracts, see the [Public API](docs/api.md).
+Alert, Bottom Sheet, and Toast opened/shown events fire when the platform UI is
+actually displayed. `LoadingStarted` instead reports that the central runtime accepted
+the request; a short request may end before its delayed spinner becomes visible.
+`LoadingEnded` reports `Dismissed`, `Disposed`, `Cancelled`, or `Reset`, plus the
+remaining `ActiveCount`. An active count of zero means no Loading requests remain.
+For the full lifecycle, ordering, ownership, and metadata contracts, see the
+[Public API](docs/api.md).
 
 ## Sample Scene
 
@@ -468,7 +474,9 @@ enter Play Mode.
 When working directly in this repository, open
 `Assets/Samples/NativePrompt/NativePromptSample.unity`. Its centered 540 x 960
 viewport includes controls for Alert, Bottom Sheet, Toast, and Loading configurations,
-including all four Loading background/input combinations, and displays the latest result.
+and displays the latest result. `LoadingStarted` / `LoadingEnded` are shown with
+their active-request count in the result panel and logged with the full request ID,
+metadata, and end reason for device verification.
 
 Use the sample in the Unity Editor to check API flows and on iOS or Android to
 check native appearance. PlayMode tests are in `Assets/Tests/PlayMode`, and plugin

@@ -19,7 +19,8 @@ namespace NativePrompt
         void Dismiss();
 
         /// <summary>
-        /// Silently removes this prompt without invoking its callback or completion event.
+        /// Removes this prompt without invoking its per-request result callback. Prompt-specific
+        /// lifecycle events may still report the disposal when documented.
         /// </summary>
         new void Dispose();
     }
@@ -66,6 +67,15 @@ namespace NativePrompt
 
         /// <summary>Occurs after a toast's individual callback has run.</summary>
         public static event EventHandler<ToastDismissedEventArgs> ToastDismissed;
+
+        /// <summary>
+        /// Occurs after a loading request is accepted. This does not guarantee that delayed
+        /// visual elements have become visible.
+        /// </summary>
+        public static event EventHandler<LoadingStartedEventArgs> LoadingStarted;
+
+        /// <summary>Occurs after a loading request is removed from the active request set.</summary>
+        public static event EventHandler<LoadingEndedEventArgs> LoadingEnded;
 
         /// <summary>
         /// Shows a native alert.
@@ -138,6 +148,12 @@ namespace NativePrompt
 
         internal static void RaiseToastDismissed(ToastDismissedEventArgs args) =>
             RaiseSafely(ToastDismissed, args);
+
+        internal static void RaiseLoadingStarted(LoadingStartedEventArgs args) =>
+            RaiseSafely(LoadingStarted, args);
+
+        internal static void RaiseLoadingEnded(LoadingEndedEventArgs args) =>
+            RaiseSafely(LoadingEnded, args);
 
         private static void RaiseSafely<T>(EventHandler<T> handlers, T args)
             where T : EventArgs

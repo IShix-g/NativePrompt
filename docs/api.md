@@ -108,8 +108,9 @@ Toast positions account for the platform safe area.
 ## Loading
 
 Use `NP.ShowLoading(LoadingOptions)` to start a request-scoped native loading
-overlay. The API returns immediately with a `LoadingHandle`; loading has no callback,
-completion result, or static lifecycle event.
+overlay. The API returns immediately with a `LoadingHandle`; loading has no callback
+or completion result. Its request lifecycle is available through the static
+`NP.LoadingStarted` and `NP.LoadingEnded` events.
 
 ```csharp
 LoadingHandle loading = NP.ShowLoading(new LoadingOptions
@@ -163,10 +164,11 @@ next-newest active request. Loading is not dismissed on `OnApplicationPause`.
 - `Dismiss()` closes the prompt and delivers the existing type-specific dismissal
   result to the individual callback and static completion event.
 - `Dispose()` silently removes the prompt or waiting request. It does not invoke
-  the individual callback or static completion event.
+  the individual result callback or result-oriented completion event.
 
 For `LoadingHandle`, both methods simply end that handle's request because Loading
-has no callback or completion event.
+has no result callback. `LoadingEnded` still reports the end with `Dismissed` or
+`Disposed`, respectively.
 
 ```csharp
 AlertOptions options = new AlertOptions
@@ -217,11 +219,21 @@ does not itself grant control of other prompts.
 - `AlertOpened` and `AlertCompleted`
 - `BottomSheetOpened` and `BottomSheetCompleted`
 - `ToastShown` and `ToastDismissed`
+- `LoadingStarted` and `LoadingEnded`
 
 Opened/shown events occur only after the platform UI is actually displayed.
 Completed/dismissed events cover user interaction, manual dismissal, Toast timeout,
 tap, and replacement. Event args expose the same `RequestId`, `Tag`, and `GroupId`
 as the handle, plus `Result` or `Reason` for completion events.
+
+Loading is request-based: `LoadingStarted` occurs after the shared strategy accepts
+the request, not after the delayed native spinner becomes visible. A request that
+ends within `ShowDelaySeconds` therefore still produces one start and one end event.
+`LoadingEndedEventArgs.Reason` is `Dismissed`, `Disposed`, `Cancelled`, or `Reset`.
+Both Loading event args include an `ActiveCount` snapshot after the corresponding
+add or removal; zero on `LoadingEnded` means no Loading requests remain. Restoring
+an older request's visual options does not emit another start. If native strategy
+startup throws, neither Loading event is emitted.
 
 ```csharp
 private void OnEnable()

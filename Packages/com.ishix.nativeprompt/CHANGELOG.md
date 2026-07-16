@@ -15,6 +15,11 @@ All notable changes to this package are documented in this file.
 - Configurable Loading message color (including alpha) and font size, with native
   pt/sp unit handling on iOS and Android.
 - Shared configurable Loading spinner color with a black default on iOS and Android.
+- `NP.LoadingStarted` and `NP.LoadingEnded` request-lifecycle events with request
+  metadata, active-request counts, and `Dismissed`, `Disposed`, `Cancelled`, or
+  `Reset` end reasons.
+- Loading sample lifecycle output in the result panel and device Console, including
+  request metadata, end reason, and active-request count.
 
 - `AlertHandle`, `BottomSheetHandle`, and the shared `IPromptHandle` contract, with
   request-scoped, idempotent dismissal on iOS, Android, and the Unity Editor.

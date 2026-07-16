@@ -54,6 +54,8 @@ namespace NativePrompt.Samples
         private void OnEnable()
         {
             Application.targetFrameRate = 60;
+            NP.LoadingStarted += OnLoadingStarted;
+            NP.LoadingEnded += OnLoadingEnded;
             _root = GetComponent<UIDocument>().rootVisualElement;
             _logicalViewport = _root.Q<VisualElement>("logical-viewport");
             _resultLabel = _root.Q<Label>("result-value");
@@ -94,6 +96,8 @@ namespace NativePrompt.Samples
             _loading = null;
             _selectedLoadingSize = null;
             _selectedLoadingPosition = null;
+            NP.LoadingStarted -= OnLoadingStarted;
+            NP.LoadingEnded -= OnLoadingEnded;
         }
 
         public string GetBoundApi(string buttonName)
@@ -342,7 +346,9 @@ namespace NativePrompt.Samples
             {
                 Position = position,
                 Size = size,
-                ShowDelaySeconds = 0f
+                ShowDelaySeconds = 0f,
+                Tag = $"spinner-{size}-{position}",
+                GroupId = "sample-loading"
             }, $"Loading: spinner only, {position} / {size}");
         }
 
@@ -397,7 +403,9 @@ namespace NativePrompt.Samples
                 Size = LoadingSize.Medium,
                 Message = "Processing...",
                 MessageColor = new Color(0.33f, 0.33f, 0.33f, 1f),
-                ShowDelaySeconds = 0.25f
+                ShowDelaySeconds = 0.25f,
+                Tag = "background-block",
+                GroupId = "sample-loading"
             }, "Loading: centered background and blocker");
         }
 
@@ -405,17 +413,17 @@ namespace NativePrompt.Samples
         {
             StopLoadingAutoDismiss();
             LoadingHandle previousLoading = _loading;
+            SetResult(
+                options.BlocksInteraction
+                    ? $"{result}; auto-dismiss in {BlockingLoadingAutoDismissSeconds:0}s"
+                    : result);
             _loading = NP.ShowLoading(options).AddTo(this);
             previousLoading?.Dismiss();
             if (options.BlocksInteraction)
             {
                 _loadingAutoDismissCoroutine = StartCoroutine(
                     DismissLoadingAfterDelay(_loading));
-                SetResult($"{result}; auto-dismiss in {BlockingLoadingAutoDismissSeconds:0}s");
-                return;
             }
-
-            SetResult(result);
         }
 
         private void DismissLoading()
@@ -428,9 +436,9 @@ namespace NativePrompt.Samples
                 return;
             }
 
-            _loading.Dismiss();
+            LoadingHandle loading = _loading;
             _loading = null;
-            SetResult("Loading: dismissed");
+            loading.Dismiss();
         }
 
         private IEnumerator DismissLoadingAfterDelay(LoadingHandle loading)
@@ -443,9 +451,8 @@ namespace NativePrompt.Samples
                 yield break;
             }
 
-            loading.Dismiss();
             _loading = null;
-            SetResult($"Loading: auto-dismissed after {BlockingLoadingAutoDismissSeconds:0}s");
+            loading.Dismiss();
         }
 
         private void StopLoadingAutoDismiss()
@@ -458,6 +465,43 @@ namespace NativePrompt.Samples
             StopCoroutine(_loadingAutoDismissCoroutine);
             _loadingAutoDismissCoroutine = null;
         }
+
+        private void OnLoadingStarted(object sender, LoadingStartedEventArgs args)
+        {
+            Debug.Log(
+                $"[NativePrompt Sample] LoadingStarted requestId={args.RequestId}, " +
+                $"tag={DisplayMetadata(args.Tag)}, groupId={DisplayMetadata(args.GroupId)}, " +
+                $"activeCount={args.ActiveCount}",
+                this);
+            SetResult(
+                $"LoadingStarted · active={args.ActiveCount}\n" +
+                $"id={ShortRequestId(args.RequestId)} · tag={DisplayMetadata(args.Tag)}\n" +
+                $"group={DisplayMetadata(args.GroupId)}");
+        }
+
+        private void OnLoadingEnded(object sender, LoadingEndedEventArgs args)
+        {
+            Debug.Log(
+                $"[NativePrompt Sample] LoadingEnded requestId={args.RequestId}, " +
+                $"reason={args.Reason}, tag={DisplayMetadata(args.Tag)}, " +
+                $"groupId={DisplayMetadata(args.GroupId)}, activeCount={args.ActiveCount}",
+                this);
+            SetResult(
+                $"LoadingEnded · {args.Reason} · active={args.ActiveCount}\n" +
+                $"id={ShortRequestId(args.RequestId)} · tag={DisplayMetadata(args.Tag)}\n" +
+                $"group={DisplayMetadata(args.GroupId)}");
+        }
+
+        private static string ShortRequestId(string requestId)
+        {
+            const int suffixLength = 8;
+            return string.IsNullOrEmpty(requestId) || requestId.Length <= suffixLength
+                ? DisplayMetadata(requestId)
+                : "…" + requestId.Substring(requestId.Length - suffixLength);
+        }
+
+        private static string DisplayMetadata(string value) =>
+            string.IsNullOrEmpty(value) ? "-" : value;
 
         private void SetResult(string value)
         {
