@@ -134,7 +134,8 @@ Defaults are `BlocksInteraction = false`, `ShowsBackground = false`, a white
 background with `0.5` opacity, `BottomRight`, `Medium`, no message, and a `0.25`
 second visual delay. `LoadingPosition` supports `Center`, `TopLeft`, `TopRight`,
 `BottomLeft`, and `BottomRight`; `LoadingSize` supports `Small`, `Medium`, and
-`Large`. Whitespace-only messages are omitted.
+`Large`. On iOS, `Medium` renders at approximately 25 pt. Whitespace-only messages
+are omitted. When present, the message is centered 8 pt/dp below the spinner.
 
 Background visibility and pointer-input blocking are independent. If blocking is
 enabled, a transparent blocker starts immediately. The background, spinner, and

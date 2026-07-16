@@ -166,6 +166,7 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
         label.textColor = UIColor.labelColor;
         label.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
         label.adjustsFontForContentSizeCategory = YES;
+        label.textAlignment = NSTextAlignmentCenter;
         label.numberOfLines = 0;
         label.lineBreakMode = NSLineBreakByWordWrapping;
         label.userInteractionEnabled = NO;
@@ -174,7 +175,7 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
 
     self.content = [[UIStackView alloc] initWithArrangedSubviews:views];
     self.content.translatesAutoresizingMaskIntoConstraints = NO;
-    self.content.axis = UILayoutConstraintAxisHorizontal;
+    self.content.axis = UILayoutConstraintAxisVertical;
     self.content.alignment = UIStackViewAlignmentCenter;
     self.content.spacing = 8.0;
     self.content.userInteractionEnabled = NO;

@@ -218,7 +218,7 @@ public final class NativeLoading {
 
         private LinearLayout createContent(String message, int size) {
             LinearLayout group = new LinearLayout(activity);
-            group.setOrientation(LinearLayout.HORIZONTAL);
+            group.setOrientation(LinearLayout.VERTICAL);
             group.setGravity(Gravity.CENTER);
 
             int progressStyle = size == SIZE_SMALL
@@ -235,13 +235,13 @@ public final class NativeLoading {
             if (!TextUtils.isEmpty(message)) {
                 Space spacing = new Space(activity);
                 group.addView(spacing, new LinearLayout.LayoutParams(
-                        dp(activity, 8),
-                        1));
+                        1,
+                        dp(activity, 8)));
 
                 TextView label = new TextView(activity);
                 label.setText(message);
                 label.setTextAppearance(android.R.style.TextAppearance_Material_Body1);
-                label.setGravity(Gravity.CENTER_VERTICAL);
+                label.setGravity(Gravity.CENTER);
                 label.setMaxLines(4);
                 label.setEllipsize(TextUtils.TruncateAt.END);
                 label.setTag("NativePromptLoadingMessage");
@@ -342,7 +342,7 @@ public final class NativeLoading {
                         "NativePromptLoadingMessage".equals(child.getTag())) {
                     ((TextView) child).setMaxWidth(Math.max(
                             dp(activity, 48),
-                            maximumWidth - dp(activity, 72)));
+                            maximumWidth));
                 }
             }
             content.setLayoutParams(params);

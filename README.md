@@ -353,7 +353,8 @@ public sealed class NativeLoadingExample : MonoBehaviour
 begins immediately, while the background, spinner, and optional message appear
 together after `ShowDelaySeconds`. Ending a request during the delay prevents its
 visual elements from appearing. Five safe-area-aware positions and three native
-spinner sizes are available.
+spinner sizes are available. On iOS, `Medium` renders at approximately 25 pt.
+When present, the message is centered below the spinner with native spacing.
 
 Multiple loading handles may coexist. The newest active handle supplies the visible
 options; ending it restores the next-newest request. The native layer keeps only one
