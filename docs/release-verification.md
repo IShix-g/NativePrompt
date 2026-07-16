@@ -84,8 +84,11 @@ Ending a delayed request first must produce no Loading display log.
 
 ### iOS and Android device procedure (user verification)
 
-Use the sample controls and, for the complete position matrix, invoke
-`NP.ShowLoading` with each enum value from a temporary caller script.
+Use the compact sample selector to combine `S` / `M` / `L` with `TL`, `TR`, `C`,
+`BL`, and `BR`. Every selector click displays a spinner-only request immediately.
+The sample also keeps a centered `BG + block (3s)` preset. Background-only and
+block-only configurations are not sample buttons; invoke `NP.ShowLoading` from a
+temporary caller script when checking those combinations.
 
 1. Check `Center`, `TopLeft`, `TopRight`, `BottomLeft`, and `BottomRight` in portrait
    and landscape. Corners must remain inside the iOS Safe Area or Android system-bar

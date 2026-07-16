@@ -111,6 +111,80 @@
     background-color: rgb(51, 65, 85);
 }
 
+.loading-selector {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.loading-option-group {
+    width: 48%;
+}
+
+.loading-option-title {
+    margin-bottom: 4px;
+    color: rgb(71, 85, 105);
+    font-size: 11px;
+    -unity-font-style: bold;
+}
+
+.loading-option-row {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.loading-position-row {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.loading-position-spacer {
+    width: 31%;
+    min-width: 0;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.loading-option-button {
+    width: 31%;
+    min-width: 0;
+    height: 32px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(148, 163, 184);
+    background-color: rgb(226, 232, 240);
+    color: rgb(51, 65, 85);
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.loading-option-button:hover {
+    border-color: rgb(13, 148, 136);
+    background-color: rgb(204, 251, 241);
+    color: rgb(17, 94, 89);
+}
+
+.loading-option-button.selected-option {
+    border-color: rgb(17, 94, 89);
+    background-color: rgb(15, 118, 110);
+    color: white;
+}
+
+.loading-option-button.selected-option:hover {
+    border-color: rgb(17, 94, 89);
+    background-color: rgb(15, 118, 110);
+    color: white;
+}
+
+.loading-action-button {
+    font-size: 14px;
+}
+
 .result-panel {
     flex-grow: 1;
     min-height: 80px;

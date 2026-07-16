@@ -5,10 +5,13 @@ logical viewport exposes representative Alert, Bottom Sheet, Toast, and Loading 
 for manual Editor or device verification. The latest callback result appears in
 the `LATEST RESULT` panel.
 
-The Loading controls cover all four background/input-block combinations, multiple
-positions and sizes, messages, and immediate/delayed presentation. Select
-`Dismiss loading` to end the active request. Blocking Loading samples automatically
-dismiss after three seconds so they cannot leave the sample controls inaccessible.
+The compact Loading selector combines `S` / `M` / `L` with the five supported
+positions (`TL`, `TR`, `C`, `BL`, `BR`). Selecting either dimension immediately
+replaces the active spinner-only request while preserving the other selection.
+`BG + block (3s)` remains as the combined background/blocking preset; background-only
+and block-only presets are intentionally omitted from the sample. Select
+`Dismiss loading` to end the active request. The blocking preset automatically
+dismisses after three seconds so it cannot leave the sample controls inaccessible.
 The manual toast remains visible until
 `Dismiss manual` is selected. Native UI
 appearance is intentionally verified on a device; the PlayMode tests cover scene

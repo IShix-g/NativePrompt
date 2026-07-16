@@ -13,6 +13,7 @@ namespace NativePrompt.Samples
         public const float LogicalHeight = 960f;
         public const float LogicalAspectRatio = LogicalWidth / LogicalHeight;
         private const float BlockingLoadingAutoDismissSeconds = 3f;
+        private const string SelectedLoadingOptionClass = "selected-option";
 
         public static readonly string[] RequiredButtonNames =
         {
@@ -27,9 +28,14 @@ namespace NativePrompt.Samples
             "toast-tap-button",
             "toast-manual-button",
             "toast-dismiss-button",
-            "loading-spinner-button",
-            "loading-background-button",
-            "loading-block-button",
+            "loading-size-small-button",
+            "loading-size-medium-button",
+            "loading-size-large-button",
+            "loading-position-top-left-button",
+            "loading-position-top-right-button",
+            "loading-position-center-button",
+            "loading-position-bottom-left-button",
+            "loading-position-bottom-right-button",
             "loading-block-background-button",
             "loading-dismiss-button"
         };
@@ -42,6 +48,8 @@ namespace NativePrompt.Samples
         private ToastHandle _manualToast;
         private LoadingHandle _loading;
         private Coroutine _loadingAutoDismissCoroutine;
+        private LoadingSize _selectedLoadingSize = LoadingSize.Medium;
+        private LoadingPosition _selectedLoadingPosition = LoadingPosition.BottomRight;
 
         public IReadOnlyDictionary<string, string> BoundApis => _boundApis;
 
@@ -114,14 +122,44 @@ namespace NativePrompt.Samples
             Bind("toast-tap-button", "NP.ShowToast", ShowTapToast);
             Bind("toast-manual-button", "NP.ShowToast", ShowManualToast);
             Bind("toast-dismiss-button", "ToastHandle.Dismiss", DismissManualToast);
-            Bind("loading-spinner-button", "NP.ShowLoading", ShowSpinnerLoading);
-            Bind("loading-background-button", "NP.ShowLoading", ShowBackgroundLoading);
-            Bind("loading-block-button", "NP.ShowLoading", ShowBlockingLoading);
+            Bind(
+                "loading-size-small-button",
+                "NP.ShowLoading",
+                () => SelectLoadingSize(LoadingSize.Small));
+            Bind(
+                "loading-size-medium-button",
+                "NP.ShowLoading",
+                () => SelectLoadingSize(LoadingSize.Medium));
+            Bind(
+                "loading-size-large-button",
+                "NP.ShowLoading",
+                () => SelectLoadingSize(LoadingSize.Large));
+            Bind(
+                "loading-position-top-left-button",
+                "NP.ShowLoading",
+                () => SelectLoadingPosition(LoadingPosition.TopLeft));
+            Bind(
+                "loading-position-top-right-button",
+                "NP.ShowLoading",
+                () => SelectLoadingPosition(LoadingPosition.TopRight));
+            Bind(
+                "loading-position-center-button",
+                "NP.ShowLoading",
+                () => SelectLoadingPosition(LoadingPosition.Center));
+            Bind(
+                "loading-position-bottom-left-button",
+                "NP.ShowLoading",
+                () => SelectLoadingPosition(LoadingPosition.BottomLeft));
+            Bind(
+                "loading-position-bottom-right-button",
+                "NP.ShowLoading",
+                () => SelectLoadingPosition(LoadingPosition.BottomRight));
             Bind(
                 "loading-block-background-button",
                 "NP.ShowLoading",
                 ShowBlockingBackgroundLoading);
             Bind("loading-dismiss-button", "LoadingHandle.Dismiss", DismissLoading);
+            UpdateLoadingOptionSelection();
         }
 
         private void Bind(string buttonName, string api, Action action)
@@ -288,38 +326,65 @@ namespace NativePrompt.Samples
             _manualToast.Dismiss();
         }
 
-        private void ShowSpinnerLoading()
+        private void SelectLoadingSize(LoadingSize size)
+        {
+            _selectedLoadingSize = size;
+            UpdateLoadingOptionSelection();
+            ShowSelectedSpinnerLoading();
+        }
+
+        private void SelectLoadingPosition(LoadingPosition position)
+        {
+            _selectedLoadingPosition = position;
+            UpdateLoadingOptionSelection();
+            ShowSelectedSpinnerLoading();
+        }
+
+        private void ShowSelectedSpinnerLoading()
         {
             ShowLoading(new LoadingOptions
             {
+                Position = _selectedLoadingPosition,
+                Size = _selectedLoadingSize,
                 ShowDelaySeconds = 0f
-            }, "Loading: spinner only, bottom-right / medium, pass-through");
+            }, $"Loading: spinner only, {_selectedLoadingPosition} / {_selectedLoadingSize}");
         }
 
-        private void ShowBackgroundLoading()
+        private void UpdateLoadingOptionSelection()
         {
-            ShowLoading(new LoadingOptions
-            {
-                ShowsBackground = true,
-                BackgroundColor = new Color(0.85f, 0.93f, 1f),
-                BackgroundOpacity = 0.65f,
-                Position = LoadingPosition.Center,
-                Size = LoadingSize.Medium,
-                Message = "Loading with pass-through background",
-                ShowDelaySeconds = 0.25f
-            }, "Loading: centered background, pass-through");
+            SetLoadingOptionSelected(
+                "loading-size-small-button",
+                _selectedLoadingSize == LoadingSize.Small);
+            SetLoadingOptionSelected(
+                "loading-size-medium-button",
+                _selectedLoadingSize == LoadingSize.Medium);
+            SetLoadingOptionSelected(
+                "loading-size-large-button",
+                _selectedLoadingSize == LoadingSize.Large);
+            SetLoadingOptionSelected(
+                "loading-position-top-left-button",
+                _selectedLoadingPosition == LoadingPosition.TopLeft);
+            SetLoadingOptionSelected(
+                "loading-position-top-right-button",
+                _selectedLoadingPosition == LoadingPosition.TopRight);
+            SetLoadingOptionSelected(
+                "loading-position-center-button",
+                _selectedLoadingPosition == LoadingPosition.Center);
+            SetLoadingOptionSelected(
+                "loading-position-bottom-left-button",
+                _selectedLoadingPosition == LoadingPosition.BottomLeft);
+            SetLoadingOptionSelected(
+                "loading-position-bottom-right-button",
+                _selectedLoadingPosition == LoadingPosition.BottomRight);
         }
 
-        private void ShowBlockingLoading()
+        private void SetLoadingOptionSelected(string buttonName, bool selected)
         {
-            ShowLoading(new LoadingOptions
+            Button button = _root.Q<Button>(buttonName);
+            if (button != null)
             {
-                BlocksInteraction = true,
-                Position = LoadingPosition.BottomLeft,
-                Size = LoadingSize.Large,
-                Message = "Input blocked immediately",
-                ShowDelaySeconds = 1f
-            }, "Loading: invisible blocker, 1s visual delay");
+                button.EnableInClassList(SelectedLoadingOptionClass, selected);
+            }
         }
 
         private void ShowBlockingBackgroundLoading()
@@ -340,8 +405,9 @@ namespace NativePrompt.Samples
         private void ShowLoading(LoadingOptions options, string result)
         {
             StopLoadingAutoDismiss();
-            _loading?.Dismiss();
+            LoadingHandle previousLoading = _loading;
             _loading = NP.ShowLoading(options).AddTo(this);
+            previousLoading?.Dismiss();
             if (options.BlocksInteraction)
             {
                 _loadingAutoDismissCoroutine = StartCoroutine(

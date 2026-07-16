@@ -45,10 +45,24 @@ namespace NativePrompt.Samples.Tests
             Assert.That(controller.GetBoundApi("sheet-destructive-button"), Is.EqualTo("NP.ShowBottomSheet"));
             Assert.That(controller.GetBoundApi("toast-manual-button"), Is.EqualTo("NP.ShowToast"));
             Assert.That(controller.GetBoundApi("toast-dismiss-button"), Is.EqualTo("ToastHandle.Dismiss"));
-            Assert.That(controller.GetBoundApi("loading-spinner-button"), Is.EqualTo("NP.ShowLoading"));
+            Assert.That(
+                controller.GetBoundApi("loading-size-medium-button"),
+                Is.EqualTo("NP.ShowLoading"));
             Assert.That(
                 controller.GetBoundApi("loading-dismiss-button"),
                 Is.EqualTo("LoadingHandle.Dismiss"));
+            Assert.That(root.Q<Button>("loading-background-button"), Is.Null);
+            Assert.That(root.Q<Button>("loading-block-button"), Is.Null);
+            Assert.That(
+                root.Q<Button>("loading-size-medium-button").ClassListContains("selected-option"),
+                Is.True);
+            Assert.That(
+                root.Q<Button>("loading-position-bottom-right-button")
+                    .ClassListContains("selected-option"),
+                Is.True);
+            Assert.That(
+                root.Q<Button>("loading-size-small-button").ClassListContains("selected-option"),
+                Is.False);
             yield return null;
         }
 
@@ -89,7 +103,11 @@ namespace NativePrompt.Samples.Tests
             Button toastAuto = root.Q<Button>("toast-auto-button");
             Button toastManual = root.Q<Button>("toast-manual-button");
             Button toastDismiss = root.Q<Button>("toast-dismiss-button");
-            Button loadingSpinner = root.Q<Button>("loading-spinner-button");
+            Button loadingSizeSmall = root.Q<Button>("loading-size-small-button");
+            Button loadingSizeMedium = root.Q<Button>("loading-size-medium-button");
+            Button loadingPositionTopLeft = root.Q<Button>("loading-position-top-left-button");
+            Button loadingPositionCenter = root.Q<Button>("loading-position-center-button");
+            Button loadingPositionBottomLeft = root.Q<Button>("loading-position-bottom-left-button");
             Button loadingBlockBackground = root.Q<Button>("loading-block-background-button");
             Button loadingDismiss = root.Q<Button>("loading-dismiss-button");
             VisualElement resultPanel = root.Q<VisualElement>("result-panel");
@@ -99,10 +117,22 @@ namespace NativePrompt.Samples.Tests
             Assert.That(alertFull.worldBound.yMax, Is.LessThan(sheetStandard.worldBound.yMin));
             Assert.That(sheetDisabled.worldBound.yMax, Is.LessThan(toastAuto.worldBound.yMin));
             Assert.That(toastManual.worldBound.y, Is.EqualTo(toastDismiss.worldBound.y).Within(0.5f));
-            Assert.That(toastDismiss.worldBound.yMax, Is.LessThan(loadingSpinner.worldBound.yMin));
+            Assert.That(toastDismiss.worldBound.yMax, Is.LessThan(loadingSizeSmall.worldBound.yMin));
             Assert.That(
-                loadingBlockBackground.worldBound.yMax,
-                Is.LessThan(loadingDismiss.worldBound.yMin));
+                loadingSizeSmall.worldBound.y,
+                Is.EqualTo(loadingSizeMedium.worldBound.y).Within(0.5f));
+            Assert.That(
+                loadingSizeSmall.worldBound.y,
+                Is.EqualTo(loadingPositionTopLeft.worldBound.y).Within(0.5f));
+            Assert.That(
+                loadingPositionTopLeft.worldBound.yMax,
+                Is.LessThanOrEqualTo(loadingPositionCenter.worldBound.yMin));
+            Assert.That(
+                loadingPositionCenter.worldBound.yMax,
+                Is.LessThanOrEqualTo(loadingPositionBottomLeft.worldBound.yMin));
+            Assert.That(
+                loadingBlockBackground.worldBound.y,
+                Is.EqualTo(loadingDismiss.worldBound.y).Within(0.5f));
             Assert.That(loadingDismiss.worldBound.yMax, Is.LessThan(resultPanel.worldBound.yMin));
         }
 
