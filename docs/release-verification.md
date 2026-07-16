@@ -84,8 +84,10 @@ Ending a delayed request first must produce no Loading display log.
 
 ### iOS and Android device procedure (user verification)
 
-Use the compact sample selector to combine `S` / `M` / `L` with `TL`, `TR`, `C`,
-`BL`, and `BR`. Every selector click displays a spinner-only request immediately.
+Use the single-row sample selector to combine `S` / `M` / `L` with `TL`, `C`, and
+`BR`. It begins unselected; the first click fills the missing dimension with `M` or
+`BR` and displays a spinner-only request immediately. `Dismiss loading` removes the
+request and clears every selection. Use a temporary caller for `TR` and `BL`.
 The sample also keeps a centered `BG + block (3s)` preset. Background-only and
 block-only configurations are not sample buttons; invoke `NP.ShowLoading` from a
 temporary caller script when checking those combinations.
@@ -100,7 +102,7 @@ temporary caller script when checking those combinations.
 4. Check all `ShowsBackground` / `BlocksInteraction` combinations. Background-only
    must pass pointer input, block-only must stop pointer input without a visible
    background, both false must pass input, and both true must block it.
-   The two blocking sample controls automatically dismiss after three seconds.
+   The blocking sample preset automatically dismisses after three seconds.
 5. Set a non-white color and multiple valid opacities. Only the full-screen
    background changes opacity; spinner and text remain fully opaque.
 6. Set a visible delay such as 1 second. When blocking is enabled, input must stop

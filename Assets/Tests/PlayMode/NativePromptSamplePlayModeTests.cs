@@ -53,13 +53,15 @@ namespace NativePrompt.Samples.Tests
                 Is.EqualTo("LoadingHandle.Dismiss"));
             Assert.That(root.Q<Button>("loading-background-button"), Is.Null);
             Assert.That(root.Q<Button>("loading-block-button"), Is.Null);
+            Assert.That(root.Q<Button>("loading-position-top-right-button"), Is.Null);
+            Assert.That(root.Q<Button>("loading-position-bottom-left-button"), Is.Null);
             Assert.That(
                 root.Q<Button>("loading-size-medium-button").ClassListContains("selected-option"),
-                Is.True);
+                Is.False);
             Assert.That(
                 root.Q<Button>("loading-position-bottom-right-button")
                     .ClassListContains("selected-option"),
-                Is.True);
+                Is.False);
             Assert.That(
                 root.Q<Button>("loading-size-small-button").ClassListContains("selected-option"),
                 Is.False);
@@ -105,9 +107,10 @@ namespace NativePrompt.Samples.Tests
             Button toastDismiss = root.Q<Button>("toast-dismiss-button");
             Button loadingSizeSmall = root.Q<Button>("loading-size-small-button");
             Button loadingSizeMedium = root.Q<Button>("loading-size-medium-button");
+            Button loadingSizeLarge = root.Q<Button>("loading-size-large-button");
             Button loadingPositionTopLeft = root.Q<Button>("loading-position-top-left-button");
             Button loadingPositionCenter = root.Q<Button>("loading-position-center-button");
-            Button loadingPositionBottomLeft = root.Q<Button>("loading-position-bottom-left-button");
+            Button loadingPositionBottomRight = root.Q<Button>("loading-position-bottom-right-button");
             Button loadingBlockBackground = root.Q<Button>("loading-block-background-button");
             Button loadingDismiss = root.Q<Button>("loading-dismiss-button");
             VisualElement resultPanel = root.Q<VisualElement>("result-panel");
@@ -123,13 +126,16 @@ namespace NativePrompt.Samples.Tests
                 Is.EqualTo(loadingSizeMedium.worldBound.y).Within(0.5f));
             Assert.That(
                 loadingSizeSmall.worldBound.y,
+                Is.EqualTo(loadingSizeLarge.worldBound.y).Within(0.5f));
+            Assert.That(
+                loadingSizeSmall.worldBound.y,
                 Is.EqualTo(loadingPositionTopLeft.worldBound.y).Within(0.5f));
             Assert.That(
-                loadingPositionTopLeft.worldBound.yMax,
-                Is.LessThanOrEqualTo(loadingPositionCenter.worldBound.yMin));
+                loadingSizeSmall.worldBound.y,
+                Is.EqualTo(loadingPositionCenter.worldBound.y).Within(0.5f));
             Assert.That(
-                loadingPositionCenter.worldBound.yMax,
-                Is.LessThanOrEqualTo(loadingPositionBottomLeft.worldBound.yMin));
+                loadingSizeSmall.worldBound.y,
+                Is.EqualTo(loadingPositionBottomRight.worldBound.y).Within(0.5f));
             Assert.That(
                 loadingBlockBackground.worldBound.y,
                 Is.EqualTo(loadingDismiss.worldBound.y).Within(0.5f));

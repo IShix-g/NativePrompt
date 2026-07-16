@@ -114,40 +114,19 @@
 .loading-selector {
     flex-direction: row;
     justify-content: space-between;
+    align-items: center;
     margin-bottom: 6px;
 }
 
-.loading-option-group {
-    width: 48%;
-}
-
-.loading-option-title {
-    margin-bottom: 4px;
-    color: rgb(71, 85, 105);
-    font-size: 11px;
-    -unity-font-style: bold;
-}
-
-.loading-option-row {
-    flex-direction: row;
-    justify-content: space-between;
-}
-
-.loading-position-row {
-    flex-direction: row;
-    justify-content: space-between;
-    margin-bottom: 2px;
-}
-
-.loading-position-spacer {
-    width: 31%;
-    min-width: 0;
-    height: 32px;
+.loading-selector-divider {
+    width: 1px;
+    height: 24px;
     flex-shrink: 0;
+    background-color: rgb(148, 163, 184);
 }
 
 .loading-option-button {
-    width: 31%;
+    width: 14%;
     min-width: 0;
     height: 32px;
     flex-shrink: 0;

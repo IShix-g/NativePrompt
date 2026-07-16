@@ -32,9 +32,7 @@ namespace NativePrompt.Samples
             "loading-size-medium-button",
             "loading-size-large-button",
             "loading-position-top-left-button",
-            "loading-position-top-right-button",
             "loading-position-center-button",
-            "loading-position-bottom-left-button",
             "loading-position-bottom-right-button",
             "loading-block-background-button",
             "loading-dismiss-button"
@@ -48,8 +46,8 @@ namespace NativePrompt.Samples
         private ToastHandle _manualToast;
         private LoadingHandle _loading;
         private Coroutine _loadingAutoDismissCoroutine;
-        private LoadingSize _selectedLoadingSize = LoadingSize.Medium;
-        private LoadingPosition _selectedLoadingPosition = LoadingPosition.BottomRight;
+        private LoadingSize? _selectedLoadingSize;
+        private LoadingPosition? _selectedLoadingPosition;
 
         public IReadOnlyDictionary<string, string> BoundApis => _boundApis;
 
@@ -94,6 +92,8 @@ namespace NativePrompt.Samples
             StopLoadingAutoDismiss();
             _loading?.Dispose();
             _loading = null;
+            _selectedLoadingSize = null;
+            _selectedLoadingPosition = null;
         }
 
         public string GetBoundApi(string buttonName)
@@ -139,17 +139,9 @@ namespace NativePrompt.Samples
                 "NP.ShowLoading",
                 () => SelectLoadingPosition(LoadingPosition.TopLeft));
             Bind(
-                "loading-position-top-right-button",
-                "NP.ShowLoading",
-                () => SelectLoadingPosition(LoadingPosition.TopRight));
-            Bind(
                 "loading-position-center-button",
                 "NP.ShowLoading",
                 () => SelectLoadingPosition(LoadingPosition.Center));
-            Bind(
-                "loading-position-bottom-left-button",
-                "NP.ShowLoading",
-                () => SelectLoadingPosition(LoadingPosition.BottomLeft));
             Bind(
                 "loading-position-bottom-right-button",
                 "NP.ShowLoading",
@@ -329,6 +321,7 @@ namespace NativePrompt.Samples
         private void SelectLoadingSize(LoadingSize size)
         {
             _selectedLoadingSize = size;
+            _selectedLoadingPosition ??= LoadingPosition.BottomRight;
             UpdateLoadingOptionSelection();
             ShowSelectedSpinnerLoading();
         }
@@ -336,18 +329,21 @@ namespace NativePrompt.Samples
         private void SelectLoadingPosition(LoadingPosition position)
         {
             _selectedLoadingPosition = position;
+            _selectedLoadingSize ??= LoadingSize.Medium;
             UpdateLoadingOptionSelection();
             ShowSelectedSpinnerLoading();
         }
 
         private void ShowSelectedSpinnerLoading()
         {
+            LoadingPosition position = _selectedLoadingPosition ?? LoadingPosition.BottomRight;
+            LoadingSize size = _selectedLoadingSize ?? LoadingSize.Medium;
             ShowLoading(new LoadingOptions
             {
-                Position = _selectedLoadingPosition,
-                Size = _selectedLoadingSize,
+                Position = position,
+                Size = size,
                 ShowDelaySeconds = 0f
-            }, $"Loading: spinner only, {_selectedLoadingPosition} / {_selectedLoadingSize}");
+            }, $"Loading: spinner only, {position} / {size}");
         }
 
         private void UpdateLoadingOptionSelection()
@@ -365,14 +361,8 @@ namespace NativePrompt.Samples
                 "loading-position-top-left-button",
                 _selectedLoadingPosition == LoadingPosition.TopLeft);
             SetLoadingOptionSelected(
-                "loading-position-top-right-button",
-                _selectedLoadingPosition == LoadingPosition.TopRight);
-            SetLoadingOptionSelected(
                 "loading-position-center-button",
                 _selectedLoadingPosition == LoadingPosition.Center);
-            SetLoadingOptionSelected(
-                "loading-position-bottom-left-button",
-                _selectedLoadingPosition == LoadingPosition.BottomLeft);
             SetLoadingOptionSelected(
                 "loading-position-bottom-right-button",
                 _selectedLoadingPosition == LoadingPosition.BottomRight);
@@ -387,8 +377,16 @@ namespace NativePrompt.Samples
             }
         }
 
+        private void ClearLoadingOptionSelection()
+        {
+            _selectedLoadingSize = null;
+            _selectedLoadingPosition = null;
+            UpdateLoadingOptionSelection();
+        }
+
         private void ShowBlockingBackgroundLoading()
         {
+            ClearLoadingOptionSelection();
             ShowLoading(new LoadingOptions
             {
                 BlocksInteraction = true,
@@ -422,6 +420,7 @@ namespace NativePrompt.Samples
         private void DismissLoading()
         {
             StopLoadingAutoDismiss();
+            ClearLoadingOptionSelection();
             if (_loading == null)
             {
                 SetResult("Loading: no request is active");
