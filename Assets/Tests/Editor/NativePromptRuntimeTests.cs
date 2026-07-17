@@ -160,7 +160,11 @@ namespace NativePrompt.Tests
             Assert.Throws<ArgumentException>(() =>
                 NP.ShowLoading(new LoadingOptions { MessageFontSize = float.PositiveInfinity }));
             Assert.Throws<ArgumentOutOfRangeException>(() =>
+                NP.ShowLoading(new LoadingOptions { Position = (LoadingPosition)(-1) }));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
                 NP.ShowLoading(new LoadingOptions { Position = (LoadingPosition)999 }));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                NP.ShowLoading(new LoadingOptions { Size = (LoadingSize)(-1) }));
             Assert.Throws<ArgumentOutOfRangeException>(() =>
                 NP.ShowLoading(new LoadingOptions { Size = (LoadingSize)999 }));
         }

@@ -142,13 +142,25 @@ namespace NativePrompt
                     "Loading message font size must be finite and greater than zero.",
                     nameof(options.MessageFontSize));
             }
-            if (!Enum.IsDefined(typeof(LoadingPosition), options.Position))
+            switch (options.Position)
             {
-                throw new ArgumentOutOfRangeException(nameof(options.Position));
+                case LoadingPosition.Center:
+                case LoadingPosition.TopLeft:
+                case LoadingPosition.TopRight:
+                case LoadingPosition.BottomLeft:
+                case LoadingPosition.BottomRight:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(options.Position));
             }
-            if (!Enum.IsDefined(typeof(LoadingSize), options.Size))
+            switch (options.Size)
             {
-                throw new ArgumentOutOfRangeException(nameof(options.Size));
+                case LoadingSize.Small:
+                case LoadingSize.Medium:
+                case LoadingSize.Large:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(options.Size));
             }
 
             return new LoadingOptions

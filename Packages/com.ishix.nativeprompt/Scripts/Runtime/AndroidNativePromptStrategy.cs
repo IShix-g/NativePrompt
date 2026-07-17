@@ -7,10 +7,18 @@ namespace NativePrompt
 {
     internal sealed class AndroidNativePromptStrategy : INativePromptStrategy
     {
-        private const string NativeClassName = "com.ishix.nativeprompt.NativeBottomSheet";
+        private const string NativeBottomSheetClassName = "com.ishix.nativeprompt.NativeBottomSheet";
         private const string NativeToastClassName = "com.ishix.nativeprompt.NativeToast";
         private const string NativeAlertClassName = "com.ishix.nativeprompt.NativeAlert";
         private const string NativeLoadingClassName = "com.ishix.nativeprompt.NativeLoading";
+        private static readonly AndroidJavaClass NativeBottomSheetClass =
+            new AndroidJavaClass(NativeBottomSheetClassName);
+        private static readonly AndroidJavaClass NativeToastClass =
+            new AndroidJavaClass(NativeToastClassName);
+        private static readonly AndroidJavaClass NativeAlertClass =
+            new AndroidJavaClass(NativeAlertClassName);
+        private static readonly AndroidJavaClass NativeLoadingClass =
+            new AndroidJavaClass(NativeLoadingClassName);
         private readonly object _gate = new object();
         private readonly Dictionary<string, BottomSheetCallbackProxy> _bottomSheetCallbacks =
             new Dictionary<string, BottomSheetCallbackProxy>(StringComparer.Ordinal);
@@ -29,18 +37,15 @@ namespace NativePrompt
 
             try
             {
-                using (var nativeClass = new AndroidJavaClass(NativeAlertClassName))
-                {
-                    nativeClass.CallStatic(
-                        "show",
-                        requestId,
-                        options.Title,
-                        options.Content,
-                        options.YesButtonText,
-                        options.NoButtonText,
-                        options.CloseButtonText,
-                        callback);
-                }
+                NativeAlertClass.CallStatic(
+                    "show",
+                    requestId,
+                    options.Title,
+                    options.Content,
+                    options.YesButtonText,
+                    options.NoButtonText,
+                    options.CloseButtonText,
+                    callback);
             }
             catch
             {
@@ -56,10 +61,7 @@ namespace NativePrompt
                 _alertCallbacks.Remove(requestId);
             }
 
-            using (var nativeClass = new AndroidJavaClass(NativeAlertClassName))
-            {
-                nativeClass.CallStatic("dismiss", requestId);
-            }
+            NativeAlertClass.CallStatic("dismiss", requestId);
         }
 
         public void ShowBottomSheet(string requestId, BottomSheetOptions options)
@@ -72,14 +74,11 @@ namespace NativePrompt
 
             try
             {
-                using (var nativeClass = new AndroidJavaClass(NativeClassName))
-                {
-                    nativeClass.CallStatic(
-                        "show",
-                        requestId,
-                        NativeBottomSheetPayload.ToJson(options),
-                        callback);
-                }
+                NativeBottomSheetClass.CallStatic(
+                    "show",
+                    requestId,
+                    NativeBottomSheetPayload.ToJson(options),
+                    callback);
             }
             catch
             {
@@ -95,10 +94,7 @@ namespace NativePrompt
                 _bottomSheetCallbacks.Remove(requestId);
             }
 
-            using (var nativeClass = new AndroidJavaClass(NativeClassName))
-            {
-                nativeClass.CallStatic("dismiss", requestId);
-            }
+            NativeBottomSheetClass.CallStatic("dismiss", requestId);
         }
 
         public void ShowToast(string requestId, ToastOptions options)
@@ -111,18 +107,15 @@ namespace NativePrompt
 
             try
             {
-                using (var nativeClass = new AndroidJavaClass(NativeToastClassName))
-                {
-                    nativeClass.CallStatic(
-                        "show",
-                        requestId,
-                        options.Message,
-                        options.Duration,
-                        options.AutoDismiss,
-                        options.DismissOnTap,
-                        (int)options.Position,
-                        callback);
-                }
+                NativeToastClass.CallStatic(
+                    "show",
+                    requestId,
+                    options.Message,
+                    options.Duration,
+                    options.AutoDismiss,
+                    options.DismissOnTap,
+                    (int)options.Position,
+                    callback);
             }
             catch
             {
@@ -138,47 +131,38 @@ namespace NativePrompt
                 _toastCallbacks.Remove(requestId);
             }
 
-            using (var nativeClass = new AndroidJavaClass(NativeToastClassName))
-            {
-                nativeClass.CallStatic("dismiss", requestId);
-            }
+            NativeToastClass.CallStatic("dismiss", requestId);
         }
 
         public void ShowLoading(string requestId, LoadingOptions options)
         {
-            using (var nativeClass = new AndroidJavaClass(NativeLoadingClassName))
-            {
-                nativeClass.CallStatic(
-                    "show",
-                    requestId,
-                    options.Message,
-                    options.BlocksInteraction,
-                    options.ShowsBackground,
-                    options.BackgroundColor.r,
-                    options.BackgroundColor.g,
-                    options.BackgroundColor.b,
-                    options.BackgroundOpacity,
-                    options.SpinnerColor.r,
-                    options.SpinnerColor.g,
-                    options.SpinnerColor.b,
-                    options.SpinnerColor.a,
-                    options.MessageColor.r,
-                    options.MessageColor.g,
-                    options.MessageColor.b,
-                    options.MessageColor.a,
-                    options.MessageFontSize,
-                    (int)options.Position,
-                    (int)options.Size,
-                    options.ShowDelaySeconds);
-            }
+            NativeLoadingClass.CallStatic(
+                "show",
+                requestId,
+                options.Message,
+                options.BlocksInteraction,
+                options.ShowsBackground,
+                options.BackgroundColor.r,
+                options.BackgroundColor.g,
+                options.BackgroundColor.b,
+                options.BackgroundOpacity,
+                options.SpinnerColor.r,
+                options.SpinnerColor.g,
+                options.SpinnerColor.b,
+                options.SpinnerColor.a,
+                options.MessageColor.r,
+                options.MessageColor.g,
+                options.MessageColor.b,
+                options.MessageColor.a,
+                options.MessageFontSize,
+                (int)options.Position,
+                (int)options.Size,
+                options.ShowDelaySeconds);
         }
 
         public void DismissLoading(string requestId)
         {
-            using (var nativeClass = new AndroidJavaClass(NativeLoadingClassName))
-            {
-                nativeClass.CallStatic("dismiss", requestId);
-            }
+            NativeLoadingClass.CallStatic("dismiss", requestId);
         }
 
         public void Reset()
@@ -190,25 +174,10 @@ namespace NativePrompt
                 _alertCallbacks.Clear();
             }
 
-            using (var nativeClass = new AndroidJavaClass(NativeClassName))
-            {
-                nativeClass.CallStatic("reset");
-            }
-
-            using (var nativeClass = new AndroidJavaClass(NativeToastClassName))
-            {
-                nativeClass.CallStatic("reset");
-            }
-
-            using (var nativeClass = new AndroidJavaClass(NativeAlertClassName))
-            {
-                nativeClass.CallStatic("reset");
-            }
-
-            using (var nativeClass = new AndroidJavaClass(NativeLoadingClassName))
-            {
-                nativeClass.CallStatic("reset");
-            }
+            NativeBottomSheetClass.CallStatic("reset");
+            NativeToastClass.CallStatic("reset");
+            NativeAlertClass.CallStatic("reset");
+            NativeLoadingClass.CallStatic("reset");
         }
 
         private void CompleteAction(
@@ -352,7 +321,7 @@ namespace NativePrompt
             internal BottomSheetCallbackProxy(
                 AndroidNativePromptStrategy owner,
                 string requestId)
-                : base(NativeClassName + "$Callback")
+                : base(NativeBottomSheetClassName + "$Callback")
             {
                 _owner = owner;
                 _requestId = requestId;
