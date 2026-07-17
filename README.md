@@ -315,9 +315,13 @@ public sealed class NativeToastExample : MonoBehaviour
 
 ![Native Loading](docs/images/native-loading.jpg)
 
-Use a loading overlay for work that has no native completion result. Keep the
-returned handle and end the request from every success, failure, and cancellation
-path.
+### Usage
+
+Use a loading overlay while an operation such as a purchase or network request is
+running. Loading does not close automatically, so keep the returned `LoadingHandle`
+and call `Dismiss()` when the operation finishes. Attach this component to a
+GameObject, call `BeginPurchase()` before starting the operation, and call
+`EndPurchase()` from every success, failure, and cancellation path.
 
 ```csharp
 using NativePrompt;
@@ -329,6 +333,9 @@ public sealed class NativeLoadingExample : MonoBehaviour
 
     public void BeginPurchase()
     {
+        // End an older request first if this method can be called more than once.
+        EndPurchase();
+
         _loading = NP.ShowLoading(new LoadingOptions
         {
             BlocksInteraction = true,
@@ -342,7 +349,8 @@ public sealed class NativeLoadingExample : MonoBehaviour
             MessageColor = new Color(0.33f, 0.33f, 0.33f, 1f),
             MessageFontSize = 17f,
             ShowDelaySeconds = 0.25f,
-            Tag = "purchase"
+            Tag = "purchase",
+            GroupId = "checkout"
         }).AddTo(this);
     }
 
@@ -354,21 +362,50 @@ public sealed class NativeLoadingExample : MonoBehaviour
 }
 ```
 
-`ShowsBackground` and `BlocksInteraction` are independent. Interaction blocking
-begins immediately, while the background, spinner, and optional message appear
-together after `ShowDelaySeconds`. Ending a request during the delay prevents its
-visual elements from appearing. Five safe-area-aware positions and three native
-spinner sizes are available. On iOS, `Medium` renders at approximately 25 pt.
-`SpinnerColor` is a shared Unity `Color` setting with a black default on both
-platforms. When present, the message is centered below the spinner with native spacing and
-uses configurable Unity `Color` (including alpha) and font size. Font size is
-interpreted as pt on iOS and sp on Android; the defaults are dark gray and 17.
+### Parameters
 
-Multiple loading handles may coexist. The newest active handle supplies the visible
-options; ending it restores the next-newest request. The native layer keeps only one
-loading view hierarchy. `Dismiss()` and `Dispose()` both end only their own loading
-request and are idempotent. Loading has no completion result or per-request callback;
-use `NP.LoadingStarted` and `NP.LoadingEnded` to observe its request lifecycle.
+All properties are optional, but the `LoadingOptions` object passed to
+`NP.ShowLoading` must not be `null`.
+
+| Parameter | Required | Description |
+| --- | --- | --- |
+| `LoadingOptions.BlocksInteraction` | No | Blocks touch and pointer input behind the overlay immediately after `ShowLoading` is called. The default is `false`. This does not block Android system Back or external input devices. |
+| `LoadingOptions.ShowsBackground` | No | Shows a full-screen solid-color background with the visual elements. The default is `false`. This setting does not control input blocking. |
+| `LoadingOptions.BackgroundColor` | No | Background color as a Unity `Color`. The default is `Color.white`. It is used only when `ShowsBackground` is `true`. |
+| `LoadingOptions.BackgroundOpacity` | No | Background opacity from `0f` (transparent) through `1f` (opaque). The default is `0.5f`. The value must be finite and in this range; it does not change spinner or message opacity. |
+| `LoadingOptions.Position` | No | Position of the spinner and message group: `Center`, `TopLeft`, `TopRight`, `BottomLeft`, or `BottomRight`. The default is `BottomRight`. Every position respects the platform safe area. |
+| `LoadingOptions.Size` | No | Native spinner size: `Small`, `Medium`, or `Large`. The default is `Medium`. This changes only the spinner; on iOS, `Medium` is approximately 25 pt. |
+| `LoadingOptions.SpinnerColor` | No | Spinner color as a Unity `Color`, including alpha. The default is `Color.black` on both iOS and Android. |
+| `LoadingOptions.Message` | No | Optional text displayed below the spinner. The default is `null`; empty or whitespace-only text is omitted. |
+| `LoadingOptions.MessageColor` | No | Message color as a Unity `Color`, including alpha. The default is dark gray: `new Color(0.33f, 0.33f, 0.33f, 1f)`. It is used only when `Message` is present. |
+| `LoadingOptions.MessageFontSize` | No | Message font size. The default is `17f`; iOS interprets it as pt and Android as sp. It must be finite and greater than zero. |
+| `LoadingOptions.ShowDelaySeconds` | No | Delay before the background, spinner, and message become visible. The default is `0.25f`; use `0f` for immediate display. It must be finite and zero or greater. Input blocking is not delayed. |
+| `LoadingOptions.Tag` | No | Caller-defined metadata describing this request, such as `"purchase"`. It is available from the handle and lifecycle events. |
+| `LoadingOptions.GroupId` | No | Caller-defined metadata grouping related requests, such as `"checkout"`. It does not automatically dismiss or control requests in the same group. |
+
+### Notes
+
+- `NP.ShowLoading` returns a `LoadingHandle`. Keep it until the operation ends;
+  losing the handle makes explicit dismissal difficult.
+- `LoadingHandle.Dismiss()` and `Dispose()` both end only that handle's request and
+  are safe to call repeatedly. `AddTo(this)` also cleans it up if the owning
+  component is destroyed, but normal success and failure paths should still call
+  `Dismiss()` promptly.
+- `ShowsBackground` and `BlocksInteraction` are independent. You can show a
+  background without blocking input, or block input without showing a background.
+- Input blocking begins immediately. The background, spinner, and optional message
+  appear together after `ShowDelaySeconds`. Ending the request during the delay
+  prevents those visual elements from appearing and removes the blocker.
+- Multiple handles may coexist. The newest active handle supplies the visible
+  options; ending it restores the next-newest request. Ending one handle never ends
+  the others.
+- Loading has no completion result or per-request callback. Subscribe to
+  `NP.LoadingStarted` and `NP.LoadingEnded` when you need to observe request
+  lifecycle changes. `LoadingStarted` means the request was accepted, not that a
+  delayed spinner is already visible.
+- Showing or dismissing only this overlay does not cause `OnApplicationPause` or
+  `OnApplicationFocus` changes. Store or purchase UI may cause those events
+  independently.
 
 ## Prompt Handles & Lifecycle Events
 
