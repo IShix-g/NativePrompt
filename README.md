@@ -58,35 +58,23 @@ You can instead add the package directly to your project's
 
 ## Quick Start
 
-Create a C# script, attach it to a GameObject, and connect `ShowAlert` to a UI
-Button's **On Click** event.
+Start with the included sample to try every API without writing setup code.
 
-```csharp
-using NativePrompt;
-using UnityEngine;
+1. Open **Window > Package Management > Package Manager**.
+2. Select **Native Prompt**, then open the **Samples** tab.
+3. Import **Native Prompt Sample**.
 
-public sealed class NativePromptQuickStart : MonoBehaviour
-{
-    public void ShowAlert()
-    {
-        NP.ShowAlert(
-            new AlertOptions
-            {
-                Title = "Saved",
-                Content = "Your changes were saved."
-            },
-            result => Debug.Log($"Alert result: {result}"))
-            .AddTo(this);
-    }
-}
-```
+<img src="docs/images/package-manager-sample-import.jpg" alt="Import Native Prompt Sample from Package Manager" width="744">
 
-The callback receives the result on the Unity main thread. `AddTo(this)` prevents
-the prompt from outliving this component or its scene.
+4. Open `Assets/Samples/NativePrompt/NativePromptSample.unity`.
+5. Enter Play Mode and use the sample controls.
 
-In the Unity Editor, Native Prompt uses utility windows or Console output to make
-API flows easy to test. Check final appearance and interaction on an iOS or Android
-device.
+<img src="docs/images/native-prompt-sample.jpg" alt="Native Prompt sample controls" width="420">
+
+In the Unity Editor, Alert and Bottom Sheet open as utility dialogs so you can
+check their basic flows. Toast and Loading use Console-based substitutes, so test
+their actual native appearance and interaction on a physical iOS or Android device.
+Confirm Alert and Bottom Sheet on-device as part of final testing as well.
 
 For common application flows, see [Recipes](docs/recipes.md).
 
@@ -322,12 +310,10 @@ arguments, metadata, delivery order, Loading counts, and end reasons.
 
 ## Sample Scene
 
-In Package Manager, select **Native Prompt**, open the **Samples** tab, and import
-**Native Prompt Sample**. Open `NativePromptSample.unity` and enter Play Mode.
-
-The sample includes Alert, Bottom Sheet, Toast, and Loading controls and displays
-their latest results. Use the Editor to check API flows, then run the sample on iOS
-or Android to check native appearance and interaction.
+The imported sample includes Alert, Bottom Sheet, Toast, and Loading controls and
+displays their latest results. Loading controls cover spinner sizes, representative
+positions, a message, background/input blocking, and manual dismissal. Follow
+[Quick Start](#quick-start) to import and open it.
 
 ## Documentation
 
