@@ -1,130 +1,105 @@
-# NativePrompt architecture
+# How NativePrompt works
 
-NativePrompt separates its public C# contract, shared request coordination, and
-platform UI implementations. This document describes their boundaries and
-ownership.
+This page explains the parts of NativePrompt that affect application code. For
+method signatures, options, results, and events, see the [API reference](api.md).
 
-## Assembly and namespace boundaries
+## From request to result
 
-| Assembly | Namespace | Responsibility |
-| --- | --- | --- |
-| `NativePrompt` | `NativePrompt` | Public facade and types, shared runtime coordination, internal strategy contract |
-| `NativePrompt.Editor` | `NativePrompt.Editor` | Editor-only strategy and UnityEditor API usage |
+Every prompt follows the same basic flow:
 
-`NativePrompt.Editor` references `NativePrompt`. The runtime assembly never
-references the Editor assembly or `UnityEditor`, so player builds cannot expose or
-pull in Editor-only types. Platform strategies and native bridge types are internal;
-only `NP` and the documented option, result, action, enum, and handle types are
-public.
+1. Your code calls an `NP.Show*()` method.
+2. NativePrompt validates the options immediately. Invalid input throws before any
+   platform UI is created.
+3. NativePrompt creates a request ID, returns a handle, and forwards the request to
+   the Unity Editor, iOS, or Android implementation.
+4. The platform reports when the UI opens and how it finishes.
+5. NativePrompt matches the result to its request and delivers the callback and
+   lifecycle event on the Unity main thread.
 
-## Request flow
+Late, duplicate, or unknown platform results are ignored. A request callback and
+its completion event are delivered at most once.
 
-```text
-Caller
-  -> NP facade (validate and normalize)
-  -> runtime coordinator (lifetime, queue/replacement, callback-once guard)
-  -> internal platform strategy
-  -> native UI
-  -> native callback receiver (request ID + result payload)
-  -> runtime coordinator (match, remove, marshal to Unity main thread)
-  -> caller callback exactly once
-```
+## What NativePrompt manages
 
-The facade owns the public signature and synchronous argument validation. It does
-not contain platform UI behavior. The runtime coordinator owns request lifetime and
-selects the internal strategy for Unity Editor, iOS, or Android at compile time.
-Unsupported targets throw `PlatformNotSupportedException` directly; an
-`OOStrategy` is intentionally not part of the design.
+NativePrompt keeps behavior that should be identical on every platform in its
+shared C# runtime:
 
-## Strategy boundary
+- option validation and normalization;
+- request IDs, metadata, and handle lifetime;
+- alert queueing, toast replacement, and loading-request ordering;
+- callback and lifecycle-event delivery;
+- cleanup when a request is dismissed, disposed, cancelled, or reset.
 
-The internal strategy accepts validated, normalized options plus an opaque request
-ID. It starts or dismisses platform UI and reports only platform events. It does not
-invoke caller callbacks, maintain the shared request registry, decide alert queue
-order, or decide toast replacement.
+The platform implementation is responsible for presenting and removing native UI,
+handling platform interaction, and reporting the outcome. As a result, prompts use
+the platform's native appearance while preserving the same public behavior.
 
-The shared runtime coordinator is responsible for:
+## Handle lifetime
 
-- assigning request IDs and matching native results to pending requests;
-- retaining each callback only while its request is active;
-- ensuring a callback is consumed at most once, including duplicate native events;
-- dispatching completion to the Unity main thread;
-- clearing pending state safely during reset, Domain Reload, or Play Mode exit;
-- allowing the strategy to be replaced internally by tests without making it public.
-- retaining loading requests by request ID and applying only the newest active options.
+Every `Show*()` method returns a handle for that specific request.
 
-Each public handle owns a cancellation-token registration independently from the
-platform strategy. `AddTo(MonoBehaviour)` registers the owner's
-`destroyCancellationToken`; cancellation enters the request-scoped removal path.
-Normal completion, manual-dismiss delivery, disposal, cancellation, and runtime reset
-all unregister the token and release request callbacks and options. Non-Loading result
-callbacks and completion events remain suppressed by disposal; Loading reports the
-removal through `LoadingEnded` with a distinct reason.
+| Action | Effect |
+| --- | --- |
+| Keep the handle | Dismiss or inspect that request later |
+| `handle.Dismiss()` | End the request and deliver its normal dismissal result |
+| `handle.Dispose()` | Silently remove Alert, Bottom Sheet, or Toast without a result callback |
+| `handle.AddTo(owner)` | Dispose or cancel the request when the `MonoBehaviour` is destroyed |
 
-Silent disposal removes only its request from the active slot, Alert FIFO queue, or
-pending main-thread delivery set. It suppresses individual and static completion
-notifications. If an active Alert is disposed, the coordinator dismisses its UI
-and advances the FIFO queue. A result already claimed for delivery, or a manual
-dismissal already sent to the platform, is cancelled without sending a second
-platform dismissal. Platform dismissal failures are logged and cannot escape an
-owner-destruction cancellation callback or prevent shared-state cleanup.
+Loading has no per-request result callback. Both `Dismiss()` and `Dispose()` end the
+request, and `LoadingEnded` reports why it ended.
 
-No Android strategy may add a runtime dependency on Material Components, Compose,
-or another external UI library. It uses Android SDK dialogs and views.
+Calls to `Dismiss()` and `Dispose()` are idempotent. Once a request has finished,
+later calls do nothing. Prefer `AddTo(this)` when the prompt should not outlive a
+component or scene.
 
-## Queue and replacement ownership
+## When requests overlap
 
-Alert presentation is a FIFO queue owned by the shared runtime coordinator. Only
-one alert is active. Completion removes the active request and starts the next
-queued request, regardless of whether the native layer reports success or closure.
+Each UI type has an explicit ownership rule:
 
-Toast presentation is a single replaceable slot owned by the shared runtime
-coordinator. Showing a new toast dismisses the current toast, consumes its callback
-with `ToastDismissReason.Replaced`, then installs the new request. A manual dismiss
-travels through the handle to the coordinator; repeated dismiss requests are safe.
+| UI | Behavior |
+| --- | --- |
+| Alert | One alert is active; later alerts wait in first-in, first-out order |
+| Bottom sheet | Each request is tracked separately; no shared queue or replacement rule is added |
+| Toast | One toast is active; a new toast replaces the previous one with `Replaced` |
+| Loading | Every call adds a request; the newest active request controls the one shared loading view |
 
-Bottom sheet action completion and cancellation use the same callback-once and
-request-ID rules. NativePrompt does not define a public queue-control API.
+Ending the newest Loading request restores the next-newest request. Ending an older
+Loading request does not change the currently visible configuration.
 
-Loading presentation is an ordered active-request list owned by the shared runtime.
-Every `ShowLoading` adds a request and applies its normalized options to the one
-native loading hierarchy. Ending a non-current request only removes that request.
-Ending the current request either reapplies the next-newest options or removes the
-hierarchy when no requests remain. Loading has no native-to-managed callback path.
-The coordinator emits `LoadingStarted` after strategy startup succeeds and emits
-`LoadingEnded` exactly once when each request leaves the list. These are managed
-request-lifecycle events, so they do not claim that delayed native visuals appeared.
-Both include the active-request count snapshot; Reset reports every removed request
-with a zero count.
-Loading defaults, including spinner and message colors, are defined once by
-`LoadingOptions`. Platform strategies receive the same normalized values and only
-translate them to UIKit or Android view APIs; native implementations do not select
-their own fallback colors.
+NativePrompt intentionally has no public `DismissAll()`, `DismissByTag()`, or
+`DismissGroup()` API. Keep the handles that your code owns.
 
-## Native callback contract
+## Callbacks and events
 
-Every native presentation receives an opaque request ID. Native code sends the ID
-and a small result payload back to one managed callback receiver. The receiver must
-not trust duplicate, late, unknown, or already-consumed IDs; those events are
-ignored. Result payloads are translated to public result types by shared runtime
-code rather than exposed as native string protocols.
+Use a callback for the result of one request. Use the static events on `NP` to
+observe all requests of a UI type.
 
-Native callbacks may arrive off the Unity main thread. The receiver schedules the
-matched completion on the Unity main thread, checks again that it has not already
-been consumed, and invokes it once. Platform strategies must not bypass this path.
+- Callbacks and events run on the Unity main thread.
+- The per-request callback runs before its completion event.
+- An exception from one callback or event subscriber is logged without blocking
+  later notifications.
+- Disposing Alert, Bottom Sheet, or Toast suppresses its result callback and
+  completion event.
+- `LoadingStarted` means the loading request was accepted. It does not guarantee
+  that delayed visual elements are already visible.
 
-## Platform-specific behavior
+Because `NP` events are static, listeners must unsubscribe with their own lifecycle.
+Event names, arguments, and examples are listed under
+[Lifecycle events](api.md#lifecycle-events).
 
-- iOS uses UIKit alerts, action sheets, and view overlays. The action sheet supplies
-  a safe popover anchor on iPad.
-- Android uses SDK `AlertDialog`, `Dialog`, and standard views. It handles Back,
-  backdrop taps, animation, and window insets according to each prompt contract.
-- Unity Editor uses a Unity native dialog for alerts. Bottom sheets and toasts log
-  their content and still complete rather than leaving requests pending.
-- Loading uses an existing window/activity view hierarchy and never presents a new
-  window, view controller, activity, or dialog. Its input blocker is active before
-  delayed visuals, and native monotonic timers make delay independent of Unity time.
+## Supported environments
 
-Native UI rendering mechanics remain platform-owned. Public options, results, queue behavior,
-replacement behavior, callback threading, and callback cardinality remain shared
-runtime responsibilities.
+NativePrompt selects its implementation automatically at compile time.
+
+| Environment | Implementation |
+| --- | --- |
+| iOS | UIKit alerts, action sheets, and view overlays |
+| Android | Android SDK dialogs and views; no Material Components or Compose dependency |
+| Unity Editor | Utility windows for Alert and Bottom Sheet; log-based Toast and Loading behavior |
+
+The runtime assembly does not reference `UnityEditor`, so Editor-only types are not
+included in player code. Other build targets throw `PlatformNotSupportedException`;
+there is no fallback UI.
+
+Editor behavior is intended for API-flow testing, not visual approval. Check final
+appearance and interaction on the target iOS and Android devices.

@@ -521,10 +521,8 @@ EditMode tests are in `Assets/Tests/Editor`.
 
 ## Documentation
 
-- [Documentation index](docs/index.md)
 - [Public API](docs/api.md)
-- [Architecture](docs/architecture.md)
-- [Release verification](docs/release-verification.md)
+- [How NativePrompt works](docs/architecture.md)
 
 ## License
 

@@ -1,55 +1,227 @@
-# NativePrompt API
+# NativePrompt API reference
 
-The runtime API is in the `NativePrompt` namespace and the `NativePrompt`
-assembly. NativePrompt uses callbacks and does not expose a Task-based API. The
-shared runtime dispatches requests to the implemented iOS, Android, or Unity Editor
-strategy.
+NativePrompt provides native alerts, bottom sheets, toasts, and loading overlays for
+iOS and Android. The same API also works in the Unity Editor for development and
+testing.
 
-## Alert
+All public types are in the `NativePrompt` namespace and the `NativePrompt`
+assembly.
 
-Use `NP.ShowAlert(AlertOptions, Action<AlertResult>)` to show an alert. `Content`
-is required. `Title`, `YesButtonText`, and `NoButtonText` are optional. Null, empty,
-or whitespace-only optional text is treated as omitted. When both Yes and No are
-omitted, NativePrompt shows one close button using `CloseButtonText` ("Close" by
-default).
+```csharp
+using NativePrompt;
+```
+
+NativePrompt is callback-based. It does not expose a `Task`-based API.
+
+## API at a glance
+
+| UI | Show method | Per-request callback | Handle | Lifecycle events |
+| --- | --- | --- | --- | --- |
+| Alert | `NP.ShowAlert(...)` | `Action<AlertResult>` | `AlertHandle` | `AlertOpened`, `AlertCompleted` |
+| Bottom sheet | `NP.ShowBottomSheet(...)` | `Action<BottomSheetResult>` | `BottomSheetHandle` | `BottomSheetOpened`, `BottomSheetCompleted` |
+| Toast | `NP.ShowToast(...)` | `Action<ToastDismissReason>` | `ToastHandle` | `ToastShown`, `ToastDismissed` |
+| Loading | `NP.ShowLoading(...)` | None | `LoadingHandle` | `LoadingStarted`, `LoadingEnded` |
+
+Use the callback passed to `Show*()` when only the caller needs the result. Use a
+static lifecycle event when another part of the application needs to observe all
+prompts of that type, for example for analytics or application-wide state.
+
+Every `Show*()` call returns a handle. Keep the handle if you need to dismiss the
+prompt later, or bind it to a `MonoBehaviour` with `AddTo(this)` so it is cleaned up
+when its owner is destroyed.
+
+## Quick start
 
 ```csharp
 using NativePrompt;
 using UnityEngine;
 
+public sealed class DeleteButton : MonoBehaviour
+{
+    public void AskForConfirmation()
+    {
+        NP.ShowAlert(
+            new AlertOptions
+            {
+                Title = "Delete save?",
+                Content = "This cannot be undone.",
+                YesButtonText = "Delete",
+                NoButtonText = "Keep"
+            },
+            result =>
+            {
+                if (result == AlertResult.Yes)
+                {
+                    DeleteSave();
+                }
+            })
+            .AddTo(this);
+    }
+
+    private void DeleteSave()
+    {
+        // Delete the save here.
+    }
+}
+```
+
+`AddTo(this)` silently disposes the alert if this component or its GameObject is
+destroyed, including during scene unload. See [Handle lifetime](#handle-lifetime)
+for the difference between dismissing and disposing.
+
+## Lifecycle events
+
+The callback supplied to a `Show*()` method belongs to one request. The events on
+`NP` are static and observe every request of that UI type.
+
+### Event list
+
+| Event | Event arguments | Raised when | Event-specific data |
+| --- | --- | --- | --- |
+| `NP.AlertOpened` | `AlertOpenedEventArgs` | The platform alert is actually displayed | None |
+| `NP.AlertCompleted` | `AlertCompletedEventArgs` | The alert finishes through a button or `Dismiss()` | `Result` |
+| `NP.BottomSheetOpened` | `BottomSheetOpenedEventArgs` | The platform bottom sheet is actually displayed | None |
+| `NP.BottomSheetCompleted` | `BottomSheetCompletedEventArgs` | An action is selected, the sheet is cancelled, or `Dismiss()` is called | `Result` |
+| `NP.ToastShown` | `ToastShownEventArgs` | The platform toast is actually displayed | None |
+| `NP.ToastDismissed` | `ToastDismissedEventArgs` | The toast times out, is tapped, is replaced, or `Dismiss()` is called | `Reason` |
+| `NP.LoadingStarted` | `LoadingStartedEventArgs` | The loading request is accepted | `ActiveCount` |
+| `NP.LoadingEnded` | `LoadingEndedEventArgs` | The loading request is removed | `ActiveCount`, `Reason` |
+
+All event argument types inherit from `PromptEventArgs` and provide:
+
+| Property | Meaning |
+| --- | --- |
+| `RequestId` | Library-generated ID for this request |
+| `Tag` | Optional caller-defined metadata captured from the options |
+| `GroupId` | Optional caller-defined grouping metadata captured from the options |
+
+Completion events add either a `Result` or `Reason` property. Loading events also
+include `ActiveCount`, the number of active loading requests after that request was
+added or removed.
+
+### Subscribe and unsubscribe
+
+`NP` events are static. Always unsubscribe when the listener is disabled or
+destroyed so that it does not keep receiving notifications.
+
+```csharp
+using NativePrompt;
+using UnityEngine;
+
+public sealed class PromptObserver : MonoBehaviour
+{
+    private void OnEnable()
+    {
+        NP.AlertOpened += OnAlertOpened;
+        NP.AlertCompleted += OnAlertCompleted;
+    }
+
+    private void OnDisable()
+    {
+        NP.AlertOpened -= OnAlertOpened;
+        NP.AlertCompleted -= OnAlertCompleted;
+    }
+
+    private void OnAlertOpened(object sender, AlertOpenedEventArgs args)
+    {
+        Debug.Log($"Opened alert {args.RequestId} (tag: {args.Tag})");
+    }
+
+    private void OnAlertCompleted(object sender, AlertCompletedEventArgs args)
+    {
+        Debug.Log($"Completed alert {args.RequestId}: {args.Result}");
+    }
+}
+```
+
+The `sender` argument is `null`; identify a request with `args.RequestId`, `args.Tag`,
+or `args.GroupId`.
+
+### Delivery rules
+
+- Callbacks and events run on the Unity main thread.
+- On completion, the per-request callback runs before the corresponding static
+  event.
+- Each completion callback and event is delivered at most once. Late or duplicate
+  platform callbacks are ignored.
+- An exception from one callback or event subscriber is logged. It does not prevent
+  later subscribers, queue advancement, or other completion notifications.
+- Calling `Dispose()` suppresses result callbacks and result-oriented events. The
+  exception is Loading: it has no result callback, and `LoadingEnded` reports the
+  disposal with `Reason == LoadingEndReason.Disposed`.
+
+`LoadingStarted` describes the request lifecycle, not visual visibility. It is
+raised after the native strategy accepts the request, even if the spinner is still
+waiting for `ShowDelaySeconds`. A request that ends during that delay still produces
+one `LoadingStarted` event and one `LoadingEnded` event. If native startup throws,
+neither event is raised.
+
+## Alert
+
+```csharp
+AlertHandle ShowAlert(
+    AlertOptions options,
+    Action<AlertResult> onCompleted = null)
+```
+
+Shows a native alert. `Content` is required. If neither a Yes nor No button is
+provided, NativePrompt shows one close button.
+
+```csharp
 AlertHandle alert = NP.ShowAlert(
     new AlertOptions
     {
         Title = "Delete save?",
         Content = "This cannot be undone.",
         YesButtonText = "Delete",
-        NoButtonText = "Keep"
+        NoButtonText = "Keep",
+        Tag = "delete-confirmation"
     },
     result => Debug.Log($"Alert result: {result}"));
-
-// Safe to call more than once; only the first call has an effect.
-alert.Dismiss();
 ```
 
-`AlertResult` is `Yes`, `No`, `Closed`, or `Dismissed`. Alert requests are processed in FIFO
-order. On Android, tapping the backdrop or pressing Back does not dismiss an alert.
-The iOS implementation uses `UIAlertController` with the alert style, Android uses
-the SDK `AlertDialog`, and the Unity Editor uses a non-blocking utility window.
-Each platform keeps its standard theme, typography, and button placement.
-An `AlertHandle` can dismiss either the displayed alert or that specific alert while
-it is waiting in the FIFO queue. A waiting alert dismissed before display does not
-raise `NP.AlertOpened`.
+### `AlertOptions`
+
+| Property | Required | Default | Description |
+| --- | --- | --- | --- |
+| `Content` | Yes | — | Main alert message; must contain non-whitespace text |
+| `Title` | No | None | Alert title |
+| `YesButtonText` | No | None | Affirmative button text |
+| `NoButtonText` | No | None | Negative button text |
+| `CloseButtonText` | No | `"Close"` | Used when both Yes and No are omitted |
+| `Tag` | No | `null` | Caller-defined request metadata |
+| `GroupId` | No | `null` | Caller-defined grouping metadata |
+
+Null, empty, or whitespace-only optional text is treated as omitted. Text values
+are trimmed when the request is created.
+
+### `AlertResult`
+
+| Value | Meaning |
+| --- | --- |
+| `Yes` | The affirmative button was selected |
+| `No` | The negative button was selected |
+| `Closed` | The fallback close button was selected |
+| `Dismissed` | `AlertHandle.Dismiss()` was called |
+
+Alert requests are displayed in first-in, first-out order. A handle can dismiss
+either the displayed alert or its specific waiting request. A waiting request that
+is dismissed completes with `Dismissed` but does not raise `AlertOpened`.
+
+On Android, tapping the backdrop or pressing Back does not dismiss an alert.
 
 ## Bottom sheet
 
-Use `NP.ShowBottomSheet(BottomSheetOptions, Action<BottomSheetResult>)` to show an
-action sheet. Provide between one and three actions. Every action requires a unique,
-non-empty `Id` and non-empty `Text`.
+```csharp
+BottomSheetHandle ShowBottomSheet(
+    BottomSheetOptions options,
+    Action<BottomSheetResult> onCompleted = null)
+```
+
+Shows an action sheet with one to three actions. Each action needs a unique ID and
+display text.
 
 ```csharp
-using NativePrompt;
-using UnityEngine;
-
 BottomSheetHandle sheet = NP.ShowBottomSheet(
     new BottomSheetOptions
     {
@@ -67,50 +239,104 @@ BottomSheetHandle sheet = NP.ShowBottomSheet(
         },
         CancelButtonText = "Cancel"
     },
-    result => Debug.Log(
-        result.IsCancelled ? "Cancelled" : $"Selected: {result.ActionId}"));
+    result =>
+    {
+        if (result.IsCancelled)
+        {
+            Debug.Log("Cancelled");
+            return;
+        }
 
-sheet.Dismiss();
+        Debug.Log($"Selected: {result.ActionId}");
+    });
 ```
 
-`BottomSheetAction.Enabled` defaults to `true`, and its `Style` defaults to
-`Default`. A cancelled result has `IsCancelled == true` and `ActionId == null`.
-Background taps and Android Back return a cancelled result.
-Calling `BottomSheetHandle.Dismiss()` also returns the existing cancelled result.
+### `BottomSheetOptions`
+
+| Property | Required | Default | Description |
+| --- | --- | --- | --- |
+| `Actions` | Yes | Empty array | One to three non-null actions |
+| `Title` | No | None | Sheet title |
+| `Content` | No | None | Supporting text |
+| `CancelButtonText` | No | `"Cancel"` | Cancel button text |
+| `Tag` | No | `null` | Caller-defined request metadata |
+| `GroupId` | No | `null` | Caller-defined grouping metadata |
+
+### `BottomSheetAction`
+
+| Property | Required | Default | Description |
+| --- | --- | --- | --- |
+| `Id` | Yes | — | Unique, non-whitespace ID returned in the result |
+| `Text` | Yes | — | Non-whitespace display text |
+| `Style` | No | `Default` | `Default` or `Destructive` |
+| `Enabled` | No | `true` | Whether the user can select this action |
+
+### `BottomSheetResult`
+
+| Property | Action selected | Cancelled |
+| --- | --- | --- |
+| `ActionId` | ID of the selected action | `null` |
+| `IsCancelled` | `false` | `true` |
+
+The result is cancelled when the user taps the background, presses Android Back,
+selects Cancel, or when `BottomSheetHandle.Dismiss()` is called.
 
 ## Toast
 
-Use `NP.ShowToast(ToastOptions, Action<ToastDismissReason>)` to show a transient
-message. `Message` is required. The default duration is 2.5 seconds, auto-dismiss
-and tap-to-dismiss are enabled, and the default position is `Bottom`.
+```csharp
+ToastHandle ShowToast(
+    ToastOptions options,
+    Action<ToastDismissReason> onDismissed = null)
+```
+
+Shows a transient message. Only one toast can be visible at a time; showing a new
+toast replaces the current toast.
 
 ```csharp
-using NativePrompt;
-using UnityEngine;
-
-ToastHandle handle = NP.ShowToast(
+ToastHandle toast = NP.ShowToast(
     new ToastOptions
     {
         Message = "Saved",
         Position = ToastPosition.Bottom
     },
     reason => Debug.Log($"Toast dismissed: {reason}"));
-
-// The caller can dismiss it before its timeout.
-handle.Dismiss();
 ```
 
-`ToastDismissReason` is `TimedOut`, `Tapped`, `ManuallyDismissed`, or `Replaced`.
-Calling `Dismiss()` more than once is safe. Only one toast is visible; showing a new
-toast replaces the current one and completes the old callback with `Replaced`.
+### `ToastOptions`
+
+| Property | Required | Default | Description |
+| --- | --- | --- | --- |
+| `Message` | Yes | — | Message; must contain non-whitespace text |
+| `Duration` | No | `2.5f` | Display duration in seconds |
+| `AutoDismiss` | No | `true` | Dismiss after `Duration` |
+| `DismissOnTap` | No | `true` | Dismiss when the toast is tapped |
+| `Position` | No | `Bottom` | `Top`, `Center`, or `Bottom` |
+| `Tag` | No | `null` | Caller-defined request metadata |
+| `GroupId` | No | `null` | Caller-defined grouping metadata |
+
 Toast positions account for the platform safe area.
+
+### `ToastDismissReason`
+
+| Value | Meaning |
+| --- | --- |
+| `TimedOut` | `Duration` elapsed |
+| `Tapped` | The user tapped the toast |
+| `ManuallyDismissed` | `ToastHandle.Dismiss()` was called |
+| `Replaced` | A newer toast replaced this toast |
+
+Replacing a toast completes the old callback and raises `ToastDismissed` with
+`Reason == ToastDismissReason.Replaced`.
 
 ## Loading
 
-Use `NP.ShowLoading(LoadingOptions)` to start a request-scoped native loading
-overlay. The API returns immediately with a `LoadingHandle`; loading has no callback
-or completion result. Its request lifecycle is available through the static
-`NP.LoadingStarted` and `NP.LoadingEnded` events.
+```csharp
+LoadingHandle ShowLoading(LoadingOptions options)
+```
+
+Starts a request-scoped loading overlay and returns immediately. Loading has no
+per-request callback; observe `LoadingStarted` and `LoadingEnded` when lifecycle
+notifications are needed.
 
 ```csharp
 LoadingHandle loading = NP.ShowLoading(new LoadingOptions
@@ -130,165 +356,149 @@ LoadingHandle loading = NP.ShowLoading(new LoadingOptions
     GroupId = "checkout"
 });
 
-// Safe to call repeatedly. Dispose() has the same effect for Loading.
-loading.Dismiss();
-```
-
-Defaults are `BlocksInteraction = false`, `ShowsBackground = false`, a white
-background with `0.5` opacity, `BottomRight`, `Medium`, a black spinner, no message,
-and a `0.25` second visual delay. `LoadingPosition` supports `Center`, `TopLeft`, `TopRight`,
-`BottomLeft`, and `BottomRight`; `LoadingSize` supports `Small`, `Medium`, and
-`Large`. On iOS, `Medium` renders at approximately 25 pt. `SpinnerColor` accepts a
-Unity `Color`, including alpha, and is applied by both native strategies. Whitespace-only
-messages are omitted. When present, the message is centered 8 pt/dp below the spinner and
-uses `MessageColor`, including its alpha channel. `MessageFontSize` is interpreted
-as pt on iOS and sp on Android. Their defaults are dark gray and `17f`.
-
-Background visibility and pointer-input blocking are independent. If blocking is
-enabled, a transparent blocker starts immediately. The background, spinner, and
-message become visible together after the configured delay, using an OS monotonic
-clock rather than Unity `Time.timeScale`. Ending the request first cancels visual
-presentation and removes the blocker.
-
-Each call creates a distinct managed request, but the native implementation owns
-one loading hierarchy. The newest active request controls the hierarchy. Ending an
-older request leaves the newest untouched; ending the newest reapplies the
-next-newest active request. Loading is not dismissed on `OnApplicationPause`.
-
-## Handles and identity metadata
-
-`AlertHandle`, `BottomSheetHandle`, `ToastHandle`, and `LoadingHandle` implement `IPromptHandle` and
-`IDisposable`. Every handle exposes a library-generated `RequestId`, the optional
-`Tag` and `GroupId` supplied in its options, and two idempotent completion paths:
-
-- `Dismiss()` closes the prompt and delivers the existing type-specific dismissal
-  result to the individual callback and static completion event.
-- `Dispose()` silently removes the prompt or waiting request. It does not invoke
-  the individual result callback or result-oriented completion event.
-
-For `LoadingHandle`, both methods simply end that handle's request because Loading
-has no result callback. `LoadingEnded` still reports the end with `Dismissed` or
-`Disposed`, respectively.
-
-```csharp
-AlertOptions options = new AlertOptions
+try
 {
-    Content = "Delete this item?",
-    YesButtonText = "Delete",
-    NoButtonText = "Keep",
-    Tag = "delete-confirmation",
-    GroupId = "inventory-screen"
-};
-
-AlertHandle alert = NP.ShowAlert(options);
-Debug.Log($"Request: {alert.RequestId}, tag: {alert.Tag}, group: {alert.GroupId}");
+    // Perform the operation.
+}
+finally
+{
+    loading.Dismiss();
+}
 ```
 
-For automatic ownership, call `AddTo(MonoBehaviour owner)`. The extension binds
-the handle to `owner.destroyCancellationToken` and returns the same concrete handle:
+### `LoadingOptions`
 
-```csharp
-NP.ShowAlert(options, result => UpdateView(result)).AddTo(this);
-```
+| Property | Default | Description |
+| --- | --- | --- |
+| `BlocksInteraction` | `false` | Block pointer input immediately |
+| `ShowsBackground` | `false` | Show a full-screen background with the spinner |
+| `BackgroundColor` | `Color.white` | Background color |
+| `BackgroundOpacity` | `0.5f` | Background opacity from `0` through `1` |
+| `Position` | `BottomRight` | `Center`, `TopLeft`, `TopRight`, `BottomLeft`, or `BottomRight` |
+| `Size` | `Medium` | `Small`, `Medium`, or `Large` |
+| `SpinnerColor` | `Color.black` | Spinner color, including alpha |
+| `Message` | None | Optional text shown below the spinner |
+| `MessageColor` | Dark gray | Message color, including alpha |
+| `MessageFontSize` | `17f` | Font size in pt on iOS and sp on Android |
+| `ShowDelaySeconds` | `0.25f` | Delay before the visual elements appear |
+| `Tag` | `null` | Caller-defined request metadata |
+| `GroupId` | `null` | Caller-defined grouping metadata |
 
-Destroying the component or GameObject, or unloading its scene, silently disposes
-the prompt. `AddTo` does not react to `OnDisable`, `enabled = false`, or GameObject
-deactivation. Passing a null or already-destroyed owner throws an argument
-exception instead of silently leaving the handle unmanaged.
+Whitespace-only messages are omitted. When present, the message is centered 8
+pt/dp below the spinner. On iOS, a medium spinner is approximately 25 pt.
 
-After a handle completes or is disposed, later `Dismiss()` and `Dispose()` calls
-are no-ops. Late platform callbacks are ignored. If a platform result or manual
-dismissal is waiting for main-thread delivery, `Dispose()` still suppresses its
-individual callback and static completion event; it does not issue a duplicate
+### Interaction and visual delay
+
+Background visibility and input blocking are independent. When
+`BlocksInteraction` is `true`, a transparent input blocker starts immediately. The
+background, spinner, and message appear together after `ShowDelaySeconds`. The delay
+uses an OS monotonic clock and is not affected by Unity `Time.timeScale`.
+
+Ending the request during the delay prevents the visual elements from appearing
+and removes the input blocker. Loading is not automatically dismissed by
+`OnApplicationPause`.
+
+### Multiple loading requests
+
+Each call creates a separate managed request, while the native side owns one shared
+loading hierarchy. The newest active request controls its appearance and interaction
+settings.
+
+- Ending an older request does not change the newest request.
+- Ending the newest request restores the next-newest active request.
+- Restoring an older request does not raise another `LoadingStarted` event.
+- `LoadingEndedEventArgs.ActiveCount == 0` means that no loading requests remain.
+
+`LoadingEndedEventArgs.Reason` is one of:
+
+| Value | Meaning |
+| --- | --- |
+| `Dismissed` | `LoadingHandle.Dismiss()` was called |
+| `Disposed` | `LoadingHandle.Dispose()` was called |
+| `Cancelled` | The owner bound through `AddTo(...)` was destroyed |
+| `Reset` | The NativePrompt runtime was reset |
+
+## Handle lifetime
+
+`AlertHandle`, `BottomSheetHandle`, `ToastHandle`, and `LoadingHandle` implement
+`IPromptHandle` and `IDisposable`.
+
+### Common handle properties
+
+| Property | Description |
+| --- | --- |
+| `RequestId` | Unique ID generated by NativePrompt for this request |
+| `Tag` | Optional metadata copied from the options |
+| `GroupId` | Optional grouping metadata copied from the options |
+
+`RequestId` cannot be supplied by the caller. `Tag` and `GroupId` do not need to be
+unique and do not grant control over other prompts. Values are captured by
+`Show*()`, so changing the options object afterward has no effect on an active
+request.
+
+### `Dismiss()` compared with `Dispose()`
+
+| Method | Alert, bottom sheet, and toast | Loading |
+| --- | --- | --- |
+| `Dismiss()` | Closes or removes the request, then delivers its normal dismissal callback and completion event | Ends the request and raises `LoadingEnded` with `Dismissed` |
+| `Dispose()` | Silently removes the request; no result callback or result-oriented completion event | Ends the request and raises `LoadingEnded` with `Disposed` |
+
+Both methods are idempotent: after the first effective call or normal completion,
+later calls do nothing. If a platform result is already waiting for main-thread
+delivery, `Dispose()` still suppresses that result and does not request a duplicate
 platform dismissal.
 
-`RequestId` is unique per prompt request and cannot be supplied through options.
-`Tag` and `GroupId` may be duplicated; they are descriptive metadata, not access
-control tokens or uniqueness guarantees. Values are captured by `Show*()`, so later
-changes to the options object do not affect an in-progress prompt.
+### Bind a handle to a `MonoBehaviour`
 
-NativePrompt intentionally has no `DismissAll()`, `DismissByTag()`, or
-`DismissGroup()` API. Keep handles for explicit manual management, or bind each
-handle to its owning component with `AddTo`. `GroupId` can describe ownership, but
-does not itself grant control of other prompts.
-
-## Lifecycle events
-
-`NP` exposes type-specific static lifecycle events:
-
-- `AlertOpened` and `AlertCompleted`
-- `BottomSheetOpened` and `BottomSheetCompleted`
-- `ToastShown` and `ToastDismissed`
-- `LoadingStarted` and `LoadingEnded`
-
-Opened/shown events occur only after the platform UI is actually displayed.
-Completed/dismissed events cover user interaction, manual dismissal, Toast timeout,
-tap, and replacement. Event args expose the same `RequestId`, `Tag`, and `GroupId`
-as the handle, plus `Result` or `Reason` for completion events.
-
-Loading is request-based: `LoadingStarted` occurs after the shared strategy accepts
-the request, not after the delayed native spinner becomes visible. A request that
-ends within `ShowDelaySeconds` therefore still produces one start and one end event.
-`LoadingEndedEventArgs.Reason` is `Dismissed`, `Disposed`, `Cancelled`, or `Reset`.
-Both Loading event args include an `ActiveCount` snapshot after the corresponding
-add or removal; zero on `LoadingEnded` means no Loading requests remain. Restoring
-an older request's visual options does not emit another start. If native strategy
-startup throws, neither Loading event is emitted.
+Call `AddTo(owner)` to dispose a prompt automatically with its owner. The extension
+returns the same concrete handle, so it can be chained after `Show*()`.
 
 ```csharp
-private void OnEnable()
-{
-    NP.AlertCompleted += OnAlertCompleted;
-}
-
-private void OnDisable()
-{
-    // NP events are static: always unsubscribe with the owner's lifecycle.
-    NP.AlertCompleted -= OnAlertCompleted;
-}
-
-private void OnAlertCompleted(object sender, AlertCompletedEventArgs args)
-{
-    Debug.Log($"{args.RequestId}: {args.Result}");
-}
+AlertHandle alert = NP.ShowAlert(
+        options,
+        result => UpdateView(result))
+    .AddTo(this);
 ```
 
-Individual callbacks and lifecycle events run on the Unity main thread. For a
-completion, NativePrompt invokes the individual callback first and then the static
-event. An exception from one callback or subscriber is logged and does not prevent
-later subscribers, queue advancement, or other completion notifications.
+`AddTo` uses `owner.destroyCancellationToken`. It reacts when the component or
+GameObject is destroyed, including during scene unload. It does not react to
+`OnDisable`, `enabled = false`, or GameObject deactivation. Passing a null or
+already-destroyed owner throws an argument exception.
 
-## Argument validation contract
+NativePrompt intentionally has no `DismissAll()`, `DismissByTag()`, or
+`DismissGroup()` API. Keep the relevant handles or bind each handle to its owner.
 
-The runtime implementation validates arguments synchronously before creating a
-native request:
+## Argument validation
 
-- All `options` arguments must be non-null.
-- `AlertOptions.Content` and `ToastOptions.Message` must contain non-whitespace text.
-- A bottom sheet must contain one to three non-null actions. Action IDs and text must
-  contain non-whitespace text, and IDs must be unique within the sheet.
-- `ToastOptions.Duration` must be greater than zero when `AutoDismiss` is enabled.
-- `LoadingOptions.BackgroundOpacity` must be finite and between zero and one.
-- `LoadingOptions.MessageFontSize` must be finite and greater than zero.
-- `LoadingOptions.ShowDelaySeconds` must be finite and zero or greater.
-- Invalid required text, action collections, action values, or duration values cause
-  an `ArgumentException`; null top-level options cause `ArgumentNullException`.
+Arguments are validated synchronously, before a native request is created.
 
-Callbacks are optional. When supplied, a callback runs exactly once on the Unity
-main thread.
+| API | Invalid input |
+| --- | --- |
+| All `Show*()` methods | `options` is `null` |
+| Alert | `Content` is null, empty, or whitespace-only |
+| Bottom sheet | Fewer than one or more than three actions; a null action; missing action ID or text; duplicate action IDs |
+| Toast | Missing `Message`; non-finite or non-positive `Duration` while `AutoDismiss` is enabled |
+| Loading | `BackgroundOpacity` outside `0`–`1`; non-finite values; negative `ShowDelaySeconds`; non-positive `MessageFontSize`; undefined `Position` or `Size` enum value |
+
+Null top-level options throw `ArgumentNullException`. Invalid values otherwise
+throw `ArgumentException` or, for undefined Loading enum values,
+`ArgumentOutOfRangeException`.
+
+Callbacks are optional. When supplied, a completion callback runs at most once on
+the Unity main thread.
 
 ## Platform behavior
 
 | Feature | iOS | Android | Unity Editor |
 | --- | --- | --- | --- |
-| Alert | UIKit `UIAlertController` (alert style) | Android SDK `AlertDialog` (not cancelled by backdrop or Back) | Non-blocking utility window |
-| Bottom sheet | UIKit action sheet | Android SDK `Dialog` and standard views | Non-blocking utility window |
-| Toast | UIKit view overlay | Android standard-view overlay | Logs the message while preserving the callback contract |
+| Alert | UIKit `UIAlertController` using alert style | SDK `AlertDialog`; backdrop and Back do not cancel | Non-blocking utility window |
+| Bottom sheet | UIKit action sheet | SDK `Dialog` and standard views | Non-blocking utility window |
+| Toast | UIKit view overlay | Standard-view overlay | Logs the message while preserving callback behavior |
 | Loading | Existing-window `UIView`, `UIActivityIndicatorView`, optional `UILabel` | Existing-activity `FrameLayout`, indeterminate `ProgressBar`, optional `TextView` | Logs when visual presentation begins |
 
-Android runtime UI does not depend on Material Components, Compose, or another
-external UI library. Unsupported platforms throw `PlatformNotSupportedException`
-at the facade; there is no out-of-scope fallback strategy.
+Android runtime UI does not require Material Components, Compose, or another
+external UI library. Unsupported platforms throw `PlatformNotSupportedException`;
+there is no fallback UI.
 
-See [Architecture](architecture.md) for the runtime ownership and native callback
-contract.
+See [How NativePrompt works](architecture.md) for request flow, lifetime, and
+overlapping prompt behavior.
