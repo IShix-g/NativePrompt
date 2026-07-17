@@ -37,7 +37,7 @@ The package ID is `com.ishix.nativeprompt`.
 
 To install it with Unity Package Manager:
 
-1. Open **Window > Package Management > Package Manager** in Unity.
+1. Open **Window > Package Manager** in Unity.
 2. Select **Install package from git URL** from the add menu.
 3. Enter the following URL:
 
@@ -60,13 +60,13 @@ You can instead add the package directly to your project's
 
 Start with the included sample to try every API without writing setup code.
 
-1. Open **Window > Package Management > Package Manager**.
+1. Open **Window > Package Manager**.
 2. Select **Native Prompt**, then open the **Samples** tab.
 3. Import **Native Prompt Sample**.
 
 <img src="docs/images/package-manager-sample-import.jpg" alt="Import Native Prompt Sample from Package Manager" width="744">
 
-4. Open `Assets/Samples/NativePrompt/NativePromptSample.unity`.
+4. Open `Assets/Samples/Native Prompt/{version}/Native Prompt Sample/NativePromptSample.unity`.
 5. Enter Play Mode and use the sample controls.
 
 <img src="docs/images/native-prompt-sample.jpg" alt="Native Prompt sample controls" width="300">
