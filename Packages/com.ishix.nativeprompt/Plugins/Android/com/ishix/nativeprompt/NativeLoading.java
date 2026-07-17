@@ -17,7 +17,6 @@ import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.Space;
 import android.widget.TextView;
 
 import com.unity3d.player.UnityPlayer;
@@ -30,6 +29,9 @@ public final class NativeLoading {
     private static final int POSITION_BOTTOM_RIGHT = 4;
     private static final int SIZE_SMALL = 0;
     private static final int SIZE_LARGE = 2;
+    private static final int CONTENT_SPACING_DP = 8;
+    private static final int CORNER_MESSAGE_MAX_LINES = 2;
+    private static final int CENTER_MESSAGE_MAX_LINES = 4;
     private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
     private static State state;
 
@@ -249,6 +251,7 @@ public final class NativeLoading {
                     messageBlue,
                     messageAlpha,
                     messageFontSize,
+                    position,
                     size);
             content.setVisibility(View.GONE);
             overlay.addView(content, createContentLayoutParams(position));
@@ -283,10 +286,20 @@ public final class NativeLoading {
                 float messageBlue,
                 float messageAlpha,
                 float messageFontSize,
+                int position,
                 int size) {
             LinearLayout group = new LinearLayout(activity);
-            group.setOrientation(LinearLayout.VERTICAL);
+            boolean hasMessage = !TextUtils.isEmpty(message);
+            boolean usesHorizontalLayout = hasMessage && position != POSITION_CENTER;
+            boolean placesSpinnerOnRight =
+                    position == POSITION_TOP_RIGHT || position == POSITION_BOTTOM_RIGHT;
+            group.setOrientation(usesHorizontalLayout
+                    ? LinearLayout.HORIZONTAL
+                    : LinearLayout.VERTICAL);
             group.setGravity(Gravity.CENTER);
+            if (usesHorizontalLayout) {
+                group.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+            }
 
             int progressStyle = size == SIZE_SMALL
                     ? android.R.attr.progressBarStyleSmall
@@ -300,21 +313,19 @@ public final class NativeLoading {
                     colorComponent(spinnerRed),
                     colorComponent(spinnerGreen),
                     colorComponent(spinnerBlue))));
-            group.addView(spinner, new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams spinnerParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT));
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
 
-            if (!TextUtils.isEmpty(message)) {
-                Space spacing = new Space(activity);
-                group.addView(spacing, new LinearLayout.LayoutParams(
-                        1,
-                        dp(activity, 8)));
-
+            if (hasMessage) {
                 TextView label = new TextView(activity);
                 label.setText(message);
                 label.setTextAppearance(android.R.style.TextAppearance_Material_Body1);
                 label.setGravity(Gravity.CENTER);
-                label.setMaxLines(4);
+                label.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+                label.setMaxLines(usesHorizontalLayout
+                        ? CORNER_MESSAGE_MAX_LINES
+                        : CENTER_MESSAGE_MAX_LINES);
                 label.setEllipsize(TextUtils.TruncateAt.END);
                 label.setTag("NativePromptLoadingMessage");
                 label.setTextColor(Color.argb(
@@ -323,9 +334,26 @@ public final class NativeLoading {
                         colorComponent(messageGreen),
                         colorComponent(messageBlue)));
                 label.setTextSize(TypedValue.COMPLEX_UNIT_SP, messageFontSize);
-                group.addView(label, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT));
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
+                if (usesHorizontalLayout) {
+                    if (placesSpinnerOnRight) {
+                        labelParams.rightMargin = dp(activity, CONTENT_SPACING_DP);
+                        group.addView(label, labelParams);
+                        group.addView(spinner, spinnerParams);
+                    } else {
+                        labelParams.leftMargin = dp(activity, CONTENT_SPACING_DP);
+                        group.addView(spinner, spinnerParams);
+                        group.addView(label, labelParams);
+                    }
+                } else {
+                    labelParams.topMargin = dp(activity, CONTENT_SPACING_DP);
+                    group.addView(spinner, spinnerParams);
+                    group.addView(label, labelParams);
+                }
+            } else {
+                group.addView(spinner, spinnerParams);
             }
 
             return group;
@@ -392,6 +420,24 @@ public final class NativeLoading {
                     dp(activity, 80),
                     Math.max(overlay.getWidth(), root.getWidth()) -
                             insetLeft - insetRight - margin * 2);
+            int maximumMessageWidth = maximumWidth;
+            if (position != POSITION_CENTER) {
+                for (int index = 0; index < content.getChildCount(); index++) {
+                    View child = content.getChildAt(index);
+                    if (child instanceof ProgressBar) {
+                        child.measure(
+                                View.MeasureSpec.makeMeasureSpec(
+                                        0,
+                                        View.MeasureSpec.UNSPECIFIED),
+                                View.MeasureSpec.makeMeasureSpec(
+                                        0,
+                                        View.MeasureSpec.UNSPECIFIED));
+                        maximumMessageWidth -=
+                                child.getMeasuredWidth() + dp(activity, CONTENT_SPACING_DP);
+                        break;
+                    }
+                }
+            }
             params.width = ViewGroup.LayoutParams.WRAP_CONTENT;
             for (int index = 0; index < content.getChildCount(); index++) {
                 View child = content.getChildAt(index);
@@ -399,7 +445,7 @@ public final class NativeLoading {
                         "NativePromptLoadingMessage".equals(child.getTag())) {
                     ((TextView) child).setMaxWidth(Math.max(
                             dp(activity, 48),
-                            maximumWidth));
+                            maximumMessageWidth));
                 }
             }
             content.setLayoutParams(params);

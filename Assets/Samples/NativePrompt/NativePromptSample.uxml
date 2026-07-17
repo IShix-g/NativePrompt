@@ -44,7 +44,8 @@
                     <ui:Button name="loading-position-bottom-right-button" text="BR" class="loading-option-button" />
                 </ui:VisualElement>
                 <ui:VisualElement class="button-grid">
-                    <ui:Button name="loading-block-background-button" text="BG + block (3s)" class="action-button loading-action-button" />
+                    <ui:Button name="loading-message-button" text="With message" class="action-button loading-action-button" />
+                    <ui:Button name="loading-block-background-button" text="BG + block (5s)" class="action-button loading-action-button" />
                     <ui:Button name="loading-dismiss-button" text="Dismiss loading" class="action-button secondary-button loading-action-button" />
                 </ui:VisualElement>
             </ui:VisualElement>

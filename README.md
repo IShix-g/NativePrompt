@@ -220,6 +220,11 @@ appear after a short delay by default, which avoids flashing the spinner for qui
 operations. Multiple loading handles may coexist; the newest active request controls
 the shared loading view.
 
+At corner positions, the message sits toward the inside of the screen and the
+spinner stays on the outside edge. At `Center`, the message appears below the
+spinner. Long messages are limited to two lines at corners and four lines at the
+center.
+
 See the [Loading API reference](docs/api.md#native-loading) for appearance options,
 delayed display, overlapping requests, and lifecycle events.
 

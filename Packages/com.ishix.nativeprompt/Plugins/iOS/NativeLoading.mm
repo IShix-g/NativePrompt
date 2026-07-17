@@ -179,10 +179,13 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
     }
     [indicator startAnimating];
 
-    NSMutableArray<UIView *> *views = [NSMutableArray arrayWithObject:indicator];
-    if (message.length > 0)
+    BOOL hasMessage = message.length > 0;
+    BOOL usesHorizontalLayout = hasMessage && position != 0;
+    BOOL placesSpinnerOnRight = position == 2 || position == 4;
+    UILabel *label = nil;
+    if (hasMessage)
     {
-        UILabel *label = [UILabel new];
+        label = [UILabel new];
         label.translatesAutoresizingMaskIntoConstraints = NO;
         label.text = message;
         label.textColor = [UIColor
@@ -192,17 +195,35 @@ static UIWindow *NativePromptLoadingKeyWindow(void)
             alpha:fmin(fmax(messageAlpha, 0.0), 1.0)];
         label.font = [UIFont systemFontOfSize:messageFontSize];
         label.textAlignment = NSTextAlignmentCenter;
-        label.numberOfLines = 0;
-        label.lineBreakMode = NSLineBreakByWordWrapping;
+        label.numberOfLines = usesHorizontalLayout ? 2 : 4;
+        label.lineBreakMode = NSLineBreakByTruncatingTail;
         label.userInteractionEnabled = NO;
+        [label setContentCompressionResistancePriority:UILayoutPriorityDefaultLow
+                                              forAxis:UILayoutConstraintAxisHorizontal];
+    }
+
+    NSMutableArray<UIView *> *views = [NSMutableArray array];
+    if (usesHorizontalLayout && placesSpinnerOnRight)
+    {
+        [views addObject:label];
+    }
+    [views addObject:indicator];
+    if (hasMessage && !(usesHorizontalLayout && placesSpinnerOnRight))
+    {
         [views addObject:label];
     }
 
     self.content = [[UIStackView alloc] initWithArrangedSubviews:views];
     self.content.translatesAutoresizingMaskIntoConstraints = NO;
-    self.content.axis = UILayoutConstraintAxisVertical;
+    self.content.axis = usesHorizontalLayout
+        ? UILayoutConstraintAxisHorizontal
+        : UILayoutConstraintAxisVertical;
     self.content.alignment = UIStackViewAlignmentCenter;
-    self.content.spacing = 8.0;
+    self.content.spacing = hasMessage ? 8.0 : 0.0;
+    if (usesHorizontalLayout)
+    {
+        self.content.semanticContentAttribute = UISemanticContentAttributeForceLeftToRight;
+    }
     self.content.userInteractionEnabled = NO;
     self.content.hidden = YES;
     [self.overlay addSubview:self.content];

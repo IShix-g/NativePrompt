@@ -49,6 +49,9 @@ namespace NativePrompt.Samples.Tests
                 controller.GetBoundApi("loading-size-medium-button"),
                 Is.EqualTo("NP.ShowLoading"));
             Assert.That(
+                controller.GetBoundApi("loading-message-button"),
+                Is.EqualTo("NP.ShowLoading"));
+            Assert.That(
                 controller.GetBoundApi("loading-dismiss-button"),
                 Is.EqualTo("LoadingHandle.Dismiss"));
             Assert.That(root.Q<Button>("loading-background-button"), Is.Null);
@@ -90,7 +93,7 @@ namespace NativePrompt.Samples.Tests
         }
 
         [UnityTest]
-        public IEnumerator ButtonsUseTwoColumnsWithoutOverlappingSections()
+        public IEnumerator ButtonsUseExpectedColumnsWithoutOverlappingSections()
         {
             NativePromptSampleController controller = Object.FindFirstObjectByType<NativePromptSampleController>();
             VisualElement root = controller.GetComponent<UIDocument>().rootVisualElement;
@@ -111,6 +114,7 @@ namespace NativePrompt.Samples.Tests
             Button loadingPositionTopLeft = root.Q<Button>("loading-position-top-left-button");
             Button loadingPositionCenter = root.Q<Button>("loading-position-center-button");
             Button loadingPositionBottomRight = root.Q<Button>("loading-position-bottom-right-button");
+            Button loadingMessage = root.Q<Button>("loading-message-button");
             Button loadingBlockBackground = root.Q<Button>("loading-block-background-button");
             Button loadingDismiss = root.Q<Button>("loading-dismiss-button");
             VisualElement resultPanel = root.Q<VisualElement>("result-panel");
@@ -137,8 +141,13 @@ namespace NativePrompt.Samples.Tests
                 loadingSizeSmall.worldBound.y,
                 Is.EqualTo(loadingPositionBottomRight.worldBound.y).Within(0.5f));
             Assert.That(
+                loadingMessage.worldBound.y,
+                Is.EqualTo(loadingBlockBackground.worldBound.y).Within(0.5f));
+            Assert.That(
                 loadingBlockBackground.worldBound.y,
                 Is.EqualTo(loadingDismiss.worldBound.y).Within(0.5f));
+            Assert.That(loadingMessage.text, Is.EqualTo("With message"));
+            Assert.That(loadingBlockBackground.text, Is.EqualTo("BG + block (5s)"));
             Assert.That(loadingDismiss.worldBound.yMax, Is.LessThan(resultPanel.worldBound.yMin));
         }
 

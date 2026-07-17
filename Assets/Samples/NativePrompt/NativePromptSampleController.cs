@@ -12,7 +12,7 @@ namespace NativePrompt.Samples
         public const float LogicalWidth = 540f;
         public const float LogicalHeight = 960f;
         public const float LogicalAspectRatio = LogicalWidth / LogicalHeight;
-        private const float BlockingLoadingAutoDismissSeconds = 3f;
+        private const float BlockingLoadingAutoDismissSeconds = 5f;
         private const string SelectedLoadingOptionClass = "selected-option";
 
         public static readonly string[] RequiredButtonNames =
@@ -34,6 +34,7 @@ namespace NativePrompt.Samples
             "loading-position-top-left-button",
             "loading-position-center-button",
             "loading-position-bottom-right-button",
+            "loading-message-button",
             "loading-block-background-button",
             "loading-dismiss-button"
         };
@@ -150,6 +151,10 @@ namespace NativePrompt.Samples
                 "loading-position-bottom-right-button",
                 "NP.ShowLoading",
                 () => SelectLoadingPosition(LoadingPosition.BottomRight));
+            Bind(
+                "loading-message-button",
+                "NP.ShowLoading",
+                ShowMessageLoading);
             Bind(
                 "loading-block-background-button",
                 "NP.ShowLoading",
@@ -407,6 +412,24 @@ namespace NativePrompt.Samples
                 Tag = "background-block",
                 GroupId = "sample-loading"
             }, "Loading: centered background and blocker");
+        }
+
+        private void ShowMessageLoading()
+        {
+            _selectedLoadingPosition ??= LoadingPosition.BottomRight;
+            _selectedLoadingSize ??= LoadingSize.Medium;
+            UpdateLoadingOptionSelection();
+            LoadingPosition position = _selectedLoadingPosition.Value;
+            LoadingSize size = _selectedLoadingSize.Value;
+            ShowLoading(new LoadingOptions
+            {
+                Position = position,
+                Size = size,
+                Message = "Now Loading...",
+                ShowDelaySeconds = 0f,
+                Tag = $"message-{size}-{position}",
+                GroupId = "sample-loading"
+            }, $"Loading: Now Loading..., {position} / {size}");
         }
 
         private void ShowLoading(LoadingOptions options, string result)

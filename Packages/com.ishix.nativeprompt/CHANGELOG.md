@@ -38,6 +38,10 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
+- Loading messages now appear beside corner spinners and below centered spinners,
+  with consistent two-line/four-line truncation on iOS and Android.
+- The sample now includes a `Now Loading...` message preset and keeps its combined
+  background/input-blocking preset visible for five seconds.
 - Lifecycle events now use `Action<TEventArgs>` so subscribers receive event
   arguments directly without an unused `sender` parameter.
 - Alert and Bottom Sheet facade methods now return handles while remaining source

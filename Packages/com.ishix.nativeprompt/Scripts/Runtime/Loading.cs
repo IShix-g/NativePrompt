@@ -19,7 +19,7 @@ namespace NativePrompt
         /// <summary>Gets or sets the background opacity from zero through one.</summary>
         public float BackgroundOpacity { get; set; } = 0.5f;
 
-        /// <summary>Gets or sets the spinner and message position.</summary>
+        /// <summary>Gets or sets the spinner and optional message layout position.</summary>
         public LoadingPosition Position { get; set; } = LoadingPosition.BottomRight;
 
         /// <summary>Gets or sets the spinner size.</summary>
@@ -28,7 +28,10 @@ namespace NativePrompt
         /// <summary>Gets or sets the spinner color, including its opacity.</summary>
         public Color SpinnerColor { get; set; } = Color.black;
 
-        /// <summary>Gets or sets an optional message displayed below the spinner.</summary>
+        /// <summary>
+        /// Gets or sets optional text displayed beside a corner spinner or below a centered
+        /// spinner.
+        /// </summary>
         public string Message { get; set; }
 
         /// <summary>Gets or sets the message color, including its opacity.</summary>

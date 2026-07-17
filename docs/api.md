@@ -412,15 +412,22 @@ finally
 | `Position` | `BottomRight` | `Center`, `TopLeft`, `TopRight`, `BottomLeft`, or `BottomRight` |
 | `Size` | `Medium` | `Small`, `Medium`, or `Large` |
 | `SpinnerColor` | `Color.black` | Spinner color, including alpha |
-| `Message` | None | Optional text shown below the spinner |
+| `Message` | None | Optional text shown beside a corner spinner or below a centered spinner |
 | `MessageColor` | Dark gray | Message color, including alpha |
 | `MessageFontSize` | `17f` | Font size in pt on iOS and sp on Android |
 | `ShowDelaySeconds` | `0.25f` | Delay before the visual elements appear |
 | `Tag` | `null` | Caller-defined request metadata |
 | `GroupId` | `null` | Caller-defined grouping metadata |
 
-Whitespace-only messages are omitted. When present, the message is centered 8
-pt/dp below the spinner. On iOS, a medium spinner is approximately 25 pt.
+Whitespace-only messages are omitted. With a message, `TopLeft` and `BottomLeft`
+place the spinner before the text, while `TopRight` and `BottomRight` place the text
+before the spinner. `Center` places the message below the spinner. The spacing is 8
+pt/dp.
+
+Corner messages use at most two lines, and centered messages use at most four.
+Longer text ends with an ellipsis on both iOS and Android. With no message, only the
+spinner is created and its position is unchanged. On iOS, a medium spinner is
+approximately 25 pt.
 
 ### Interaction and visual delay
 
