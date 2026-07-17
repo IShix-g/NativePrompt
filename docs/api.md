@@ -13,6 +13,8 @@ using NativePrompt;
 
 NativePrompt is callback-based. It does not expose a `Task`-based API.
 
+For task-oriented examples, see [Recipes](recipes.md).
+
 ## API at a glance
 
 | UI | Show method | Per-request callback | Handle | Lifecycle events |
@@ -122,12 +124,12 @@ public sealed class PromptObserver : MonoBehaviour
         NP.AlertCompleted -= OnAlertCompleted;
     }
 
-    private void OnAlertOpened(object sender, AlertOpenedEventArgs args)
+    private void OnAlertOpened(object _, AlertOpenedEventArgs args)
     {
         Debug.Log($"Opened alert {args.RequestId} (tag: {args.Tag})");
     }
 
-    private void OnAlertCompleted(object sender, AlertCompletedEventArgs args)
+    private void OnAlertCompleted(object _, AlertCompletedEventArgs args)
     {
         Debug.Log($"Completed alert {args.RequestId}: {args.Result}");
     }
@@ -431,10 +433,8 @@ settings.
 | `Tag` | Optional metadata copied from the options |
 | `GroupId` | Optional grouping metadata copied from the options |
 
-`RequestId` cannot be supplied by the caller. `Tag` and `GroupId` do not need to be
-unique and do not grant control over other prompts. Values are captured by
-`Show*()`, so changing the options object afterward has no effect on an active
-request.
+`RequestId` cannot be supplied by the caller. See
+[Optional request metadata](#optional-request-metadata) for `Tag` and `GroupId`.
 
 ### `Dismiss()` compared with `Dispose()`
 
@@ -467,6 +467,38 @@ already-destroyed owner throws an argument exception.
 
 NativePrompt intentionally has no `DismissAll()`, `DismissByTag()`, or
 `DismissGroup()` API. Keep the relevant handles or bind each handle to its owner.
+
+## Optional request metadata
+
+Every options type provides `Tag` and `GroupId`. Both are optional; leave them
+unset when your application does not need request metadata.
+
+| Property | Suggested use | Example |
+| --- | --- | --- |
+| `Tag` | Describe the purpose of one request | `"delete-confirmation"`, `"purchase-loading"` |
+| `GroupId` | Label a screen or application flow shared by related requests | `"inventory-screen"`, `"checkout"` |
+
+NativePrompt copies these values to the returned handle and to lifecycle event
+arguments. This makes them useful for logs, analytics, or correlating a global
+event with application state.
+
+```csharp
+AlertHandle alert = NP.ShowAlert(new AlertOptions
+{
+    Content = "Delete this item?",
+    YesButtonText = "Delete",
+    NoButtonText = "Keep",
+    Tag = "delete-confirmation",
+    GroupId = "inventory-screen"
+});
+
+Debug.Log($"{alert.RequestId}: {alert.Tag} / {alert.GroupId}");
+```
+
+`Tag` and `GroupId` are descriptive strings only. They do not need to be unique,
+and NativePrompt does not filter, dismiss, or authorize requests with them. Values
+are captured by `Show*()`, so changing the options object afterward does not change
+an active request.
 
 ## Argument validation
 

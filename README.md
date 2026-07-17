@@ -88,6 +88,8 @@ In the Unity Editor, Native Prompt uses utility windows or Console output to mak
 API flows easy to test. Check final appearance and interaction on an iOS or Android
 device.
 
+For common application flows, see [Recipes](docs/recipes.md).
+
 ## Native Alert
 
 ![Native Alert](docs/images/native-alert.jpg)
@@ -276,7 +278,7 @@ private void OnDisable()
     NP.AlertCompleted -= OnAlertCompleted;
 }
 
-private void OnAlertCompleted(object sender, AlertCompletedEventArgs args)
+private void OnAlertCompleted(object _, AlertCompletedEventArgs args)
 {
     Debug.Log($"{args.RequestId}: {args.Result}");
 }
@@ -301,6 +303,7 @@ or Android to check native appearance and interaction.
 ## Documentation
 
 - [API reference](docs/api.md)
+- [Recipes](docs/recipes.md)
 - [How NativePrompt works](docs/architecture.md)
 
 ## License
