@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="native-prompt-preview-root" class="np-preview-root" picking-mode="Ignore">
+        <ui:VisualElement name="native-prompt-loading-layer" class="np-layer" picking-mode="Ignore" />
+        <ui:VisualElement name="native-prompt-toast-layer" class="np-layer" picking-mode="Ignore" />
+        <ui:VisualElement name="native-prompt-modal-layer" class="np-layer" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -48,8 +48,8 @@ All notable changes to this package are documented in this file.
   compatible with callers that ignore their return values.
 - Completion callbacks and lifecycle subscribers are isolated so an exception does
   not stop later notifications or Alert FIFO processing.
-- Unity Editor Alert and Bottom Sheet presentation now uses dismissible,
-  non-blocking utility windows.
+- Unity Editor presentation now uses iOS-inspired Game view previews with white
+  surfaces and a dark pill-shaped Toast, loaded only from Editor assets.
 
 ## [0.1.0] - 2026-07-15
 

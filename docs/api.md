@@ -564,10 +564,10 @@ the Unity main thread.
 
 | Feature | iOS | Android | Unity Editor |
 | --- | --- | --- | --- |
-| Alert | UIKit `UIAlertController` using alert style | SDK `AlertDialog`; backdrop and Back do not cancel | Non-blocking utility window |
-| Bottom sheet | UIKit action sheet | SDK `Dialog` and standard views | Non-blocking utility window |
-| Toast | UIKit view overlay | Standard-view overlay | Logs the message while preserving callback behavior |
-| Loading | Existing-window `UIView`, `UIActivityIndicatorView`, optional `UILabel` | Existing-activity `FrameLayout`, indeterminate `ProgressBar`, optional `TextView` | Logs when visual presentation begins |
+| Alert | UIKit `UIAlertController` using alert style | SDK `AlertDialog`; backdrop and Back do not cancel | iOS-inspired Game view card |
+| Bottom sheet | UIKit action sheet | SDK `Dialog` and standard views | iOS-inspired Game view action sheet |
+| Toast | UIKit view overlay | Standard-view overlay | iOS-inspired Game view banner |
+| Loading | Existing-window `UIView`, `UIActivityIndicatorView`, optional `UILabel` | Existing-activity `FrameLayout`, indeterminate `ProgressBar`, optional `TextView` | Game view overlay with position, size, delay, and blocking behavior |
 
 Android runtime UI does not require Material Components, Compose, or another
 external UI library. Unsupported platforms throw `PlatformNotSupportedException`;

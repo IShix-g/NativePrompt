@@ -12,6 +12,7 @@ toasts, and loading overlays on iOS and Android through one small C# API.
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Unity Editor Preview](#unity-editor-preview)
 - [Native Alert](#native-alert)
 - [Native Bottom Sheet](#native-bottom-sheet)
 - [Native Toast](#native-toast)
@@ -71,12 +72,31 @@ Start with the included sample to try every API without writing setup code.
 
 <img src="docs/images/native-prompt-sample.jpg" alt="Native Prompt sample controls" width="300">
 
-In the Unity Editor, Alert and Bottom Sheet open as utility dialogs so you can
-check their basic flows. Toast and Loading use Console-based substitutes, so test
-their actual native appearance and interaction on a physical iOS or Android device.
-Confirm Alert and Bottom Sheet on-device as part of final testing as well.
-
 For common application flows, see [Recipes](docs/recipes.md).
+
+## Unity Editor Preview
+
+Alert, Bottom Sheet, Toast, and Loading are rendered directly over the Game view
+while running in the Unity Editor. They are visual, interactive previews rather
+than Console-only substitutes:
+
+- Alert uses an iOS-inspired white dialog with working buttons and callbacks.
+- Bottom Sheet uses white action groups, destructive and disabled states, a
+  separate cancel action, and backdrop cancellation.
+- Toast uses a dark pill-shaped view with automatic, tap, and manual dismissal.
+- Loading uses an animated spinner and reflects its size, position, message,
+  delayed display, background, and interaction-blocking options.
+
+The preview uses a UI Toolkit panel with sorting order `32760` so it appears above
+ordinary Game view UI. Its UXML, USS, and theme are stored under the package's
+`Editor` directory and loaded through `AssetDatabase`. They are not stored in
+`Resources` or `StreamingAssets`, are not referenced by scenes, and are not included
+in player builds. Console messages may still be emitted for diagnostics, but they
+are not the Editor presentation.
+
+The Editor preview follows the iOS presentation as a practical design reference.
+Confirm final native appearance and interaction on physical iOS and Android
+devices.
 
 ## [Native Alert](docs/api.md#native-alert)
 

@@ -97,11 +97,11 @@ NativePrompt selects its implementation automatically at compile time.
 | --- | --- |
 | iOS | UIKit alerts, action sheets, and view overlays |
 | Android | Android SDK dialogs and views; no Material Components or Compose dependency |
-| Unity Editor | Utility windows for Alert and Bottom Sheet; log-based Toast and Loading behavior |
+| Unity Editor | iOS-inspired Game view previews loaded from Editor-only assets |
 
 The runtime assembly does not reference `UnityEditor`, so Editor-only types are not
 included in player code. Other build targets throw `PlatformNotSupportedException`;
 there is no fallback UI.
 
-Editor behavior is intended for API-flow testing, not visual approval. Check final
-appearance and interaction on the target iOS and Android devices.
+Editor previews are intended for API-flow and layout testing. They are not UIKit,
+so check final appearance and interaction on the target iOS and Android devices.
