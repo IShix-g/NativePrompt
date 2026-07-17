@@ -508,9 +508,16 @@ namespace NativePrompt.Tests
         public IEnumerator EditorLoading_LogsOnlyAfterUnscaledDelay()
         {
             NativePromptRuntime.SetForTesting(new EditorNativePromptStrategy(), _dispatcher);
+            // Match fields independently so diagnostic fields can be added or reordered
+            // without changing this delay-focused test.
             LogAssert.Expect(
                 LogType.Log,
-                new Regex("NativePrompt Loading: position=Center, size=Small, message=Working"));
+                new Regex(
+                    @"^NativePrompt Loading: " +
+                    @"(?=[^\r\n]*position=Center(?:,|$))" +
+                    @"(?=[^\r\n]*size=Small(?:,|$))" +
+                    @"(?=[^\r\n]*message=Working(?:,|$))" +
+                    @"[^\r\n]*$"));
 
             NP.ShowLoading(new LoadingOptions
             {

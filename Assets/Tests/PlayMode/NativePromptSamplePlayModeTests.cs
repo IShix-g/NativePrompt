@@ -88,8 +88,31 @@ namespace NativePrompt.Samples.Tests
             Assert.That(
                 viewport.resolvedStyle.width / viewport.resolvedStyle.height,
                 Is.EqualTo(NativePromptSampleController.LogicalAspectRatio).Within(0.001f));
-            Assert.That(viewport.resolvedStyle.width, Is.LessThanOrEqualTo(NativePromptSampleController.LogicalWidth));
-            Assert.That(viewport.resolvedStyle.height, Is.LessThanOrEqualTo(NativePromptSampleController.LogicalHeight));
+
+            float configuredWidth = viewport.style.width.value.value;
+            float configuredHeight = viewport.style.height.value.value;
+            Assert.That(
+                configuredWidth,
+                Is.LessThanOrEqualTo(NativePromptSampleController.LogicalWidth));
+            Assert.That(
+                configuredHeight,
+                Is.LessThanOrEqualTo(NativePromptSampleController.LogicalHeight));
+
+            // UI Toolkit snaps layout to physical pixels. Convert one screen pixel to panel
+            // units so the rendered size can tolerate that rounding without hiding a real
+            // configured-size overflow.
+            Vector2 panelOrigin = RuntimePanelUtils.ScreenToPanel(viewport.panel, Vector2.zero);
+            Vector2 panelPixel = RuntimePanelUtils.ScreenToPanel(viewport.panel, Vector2.one);
+            float pixelTolerance = Mathf.Max(
+                Mathf.Abs(panelPixel.x - panelOrigin.x),
+                Mathf.Abs(panelPixel.y - panelOrigin.y));
+            Assert.That(pixelTolerance, Is.GreaterThan(0f));
+            Assert.That(
+                viewport.resolvedStyle.width,
+                Is.LessThanOrEqualTo(configuredWidth + pixelTolerance));
+            Assert.That(
+                viewport.resolvedStyle.height,
+                Is.LessThanOrEqualTo(configuredHeight + pixelTolerance));
         }
 
         [UnityTest]
