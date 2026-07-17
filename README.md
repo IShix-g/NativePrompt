@@ -69,7 +69,7 @@ Start with the included sample to try every API without writing setup code.
 4. Open `Assets/Samples/NativePrompt/NativePromptSample.unity`.
 5. Enter Play Mode and use the sample controls.
 
-<img src="docs/images/native-prompt-sample.jpg" alt="Native Prompt sample controls" width="420">
+<img src="docs/images/native-prompt-sample.jpg" alt="Native Prompt sample controls" width="300">
 
 In the Unity Editor, Alert and Bottom Sheet open as utility dialogs so you can
 check their basic flows. Toast and Loading use Console-based substitutes, so test
