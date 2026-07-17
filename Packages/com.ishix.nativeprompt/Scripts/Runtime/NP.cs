@@ -51,31 +51,31 @@ namespace NativePrompt
     public static class NP
     {
         /// <summary>Occurs after an alert is actually displayed.</summary>
-        public static event EventHandler<AlertOpenedEventArgs> AlertOpened;
+        public static event Action<AlertOpenedEventArgs> AlertOpened;
 
         /// <summary>Occurs after an alert's individual callback has run.</summary>
-        public static event EventHandler<AlertCompletedEventArgs> AlertCompleted;
+        public static event Action<AlertCompletedEventArgs> AlertCompleted;
 
         /// <summary>Occurs after a bottom sheet is actually displayed.</summary>
-        public static event EventHandler<BottomSheetOpenedEventArgs> BottomSheetOpened;
+        public static event Action<BottomSheetOpenedEventArgs> BottomSheetOpened;
 
         /// <summary>Occurs after a bottom sheet's individual callback has run.</summary>
-        public static event EventHandler<BottomSheetCompletedEventArgs> BottomSheetCompleted;
+        public static event Action<BottomSheetCompletedEventArgs> BottomSheetCompleted;
 
         /// <summary>Occurs after a toast is actually displayed.</summary>
-        public static event EventHandler<ToastShownEventArgs> ToastShown;
+        public static event Action<ToastShownEventArgs> ToastShown;
 
         /// <summary>Occurs after a toast's individual callback has run.</summary>
-        public static event EventHandler<ToastDismissedEventArgs> ToastDismissed;
+        public static event Action<ToastDismissedEventArgs> ToastDismissed;
 
         /// <summary>
         /// Occurs after a loading request is accepted. This does not guarantee that delayed
         /// visual elements have become visible.
         /// </summary>
-        public static event EventHandler<LoadingStartedEventArgs> LoadingStarted;
+        public static event Action<LoadingStartedEventArgs> LoadingStarted;
 
         /// <summary>Occurs after a loading request is removed from the active request set.</summary>
-        public static event EventHandler<LoadingEndedEventArgs> LoadingEnded;
+        public static event Action<LoadingEndedEventArgs> LoadingEnded;
 
         /// <summary>
         /// Shows a native alert.
@@ -155,7 +155,7 @@ namespace NativePrompt
         internal static void RaiseLoadingEnded(LoadingEndedEventArgs args) =>
             RaiseSafely(LoadingEnded, args);
 
-        private static void RaiseSafely<T>(EventHandler<T> handlers, T args)
+        private static void RaiseSafely<T>(Action<T> handlers, T args)
             where T : EventArgs
         {
             if (handlers == null)
@@ -163,11 +163,11 @@ namespace NativePrompt
                 return;
             }
 
-            foreach (EventHandler<T> handler in handlers.GetInvocationList())
+            foreach (Action<T> handler in handlers.GetInvocationList())
             {
                 try
                 {
-                    handler(null, args);
+                    handler(args);
                 }
                 catch (Exception exception)
                 {

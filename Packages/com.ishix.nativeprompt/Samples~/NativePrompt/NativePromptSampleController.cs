@@ -466,7 +466,7 @@ namespace NativePrompt.Samples
             _loadingAutoDismissCoroutine = null;
         }
 
-        private void OnLoadingStarted(object sender, LoadingStartedEventArgs args)
+        private void OnLoadingStarted(LoadingStartedEventArgs args)
         {
             Debug.Log(
                 $"[NativePrompt Sample] LoadingStarted requestId={args.RequestId}, " +
@@ -479,7 +479,7 @@ namespace NativePrompt.Samples
                 $"group={DisplayMetadata(args.GroupId)}");
         }
 
-        private void OnLoadingEnded(object sender, LoadingEndedEventArgs args)
+        private void OnLoadingEnded(LoadingEndedEventArgs args)
         {
             Debug.Log(
                 $"[NativePrompt Sample] LoadingEnded requestId={args.RequestId}, " +

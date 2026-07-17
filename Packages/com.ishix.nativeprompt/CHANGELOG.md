@@ -36,6 +36,8 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
+- Lifecycle events now use `Action<TEventArgs>` so subscribers receive event
+  arguments directly without an unused `sender` parameter.
 - Alert and Bottom Sheet facade methods now return handles while remaining source
   compatible with callers that ignore their return values.
 - Completion callbacks and lifecycle subscribers are isolated so an exception does

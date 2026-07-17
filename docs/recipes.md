@@ -164,7 +164,7 @@ private void OnDisable()
     NP.LoadingEnded -= OnLoadingEnded;
 }
 
-private void OnLoadingStarted(object _, LoadingStartedEventArgs args)
+private void OnLoadingStarted(LoadingStartedEventArgs args)
 {
     if (args.ActiveCount == 1)
     {
@@ -172,7 +172,7 @@ private void OnLoadingStarted(object _, LoadingStartedEventArgs args)
     }
 }
 
-private void OnLoadingEnded(object _, LoadingEndedEventArgs args)
+private void OnLoadingEnded(LoadingEndedEventArgs args)
 {
     if (args.ActiveCount == 0)
     {
@@ -218,7 +218,7 @@ public void ShowTrackedAlert()
     }).AddTo(this);
 }
 
-private void OnAlertCompleted(object _, AlertCompletedEventArgs args)
+private void OnAlertCompleted(AlertCompletedEventArgs args)
 {
     Debug.Log(
         $"{args.GroupId} / {args.Tag} / {args.RequestId}: {args.Result}");

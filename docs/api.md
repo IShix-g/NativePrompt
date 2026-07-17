@@ -74,7 +74,9 @@ for the difference between dismissing and disposing.
 ## Lifecycle events
 
 The callback supplied to a `Show*()` method belongs to one request. The events on
-`NP` are static and observe every request of that UI type.
+`NP` are static `Action<TEventArgs>` events and observe every request of that UI
+type. Subscribers receive the event arguments directly; there is no `sender`
+parameter.
 
 ### Event list
 
@@ -124,20 +126,19 @@ public sealed class PromptObserver : MonoBehaviour
         NP.AlertCompleted -= OnAlertCompleted;
     }
 
-    private void OnAlertOpened(object _, AlertOpenedEventArgs args)
+    private void OnAlertOpened(AlertOpenedEventArgs args)
     {
         Debug.Log($"Opened alert {args.RequestId} (tag: {args.Tag})");
     }
 
-    private void OnAlertCompleted(object _, AlertCompletedEventArgs args)
+    private void OnAlertCompleted(AlertCompletedEventArgs args)
     {
         Debug.Log($"Completed alert {args.RequestId}: {args.Result}");
     }
 }
 ```
 
-The `sender` argument is `null`; identify a request with `args.RequestId`, `args.Tag`,
-or `args.GroupId`.
+Identify a request with `args.RequestId`, `args.Tag`, or `args.GroupId`.
 
 ### Delivery rules
 

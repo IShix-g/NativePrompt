@@ -278,7 +278,7 @@ private void OnDisable()
     NP.AlertCompleted -= OnAlertCompleted;
 }
 
-private void OnAlertCompleted(object _, AlertCompletedEventArgs args)
+private void OnAlertCompleted(AlertCompletedEventArgs args)
 {
     Debug.Log($"{args.RequestId}: {args.Result}");
 }

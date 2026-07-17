@@ -280,8 +280,8 @@ namespace NativePrompt.Tests
         {
             var started = new List<LoadingStartedEventArgs>();
             var ended = new List<LoadingEndedEventArgs>();
-            EventHandler<LoadingStartedEventArgs> onStarted = (_, args) => started.Add(args);
-            EventHandler<LoadingEndedEventArgs> onEnded = (_, args) => ended.Add(args);
+            Action<LoadingStartedEventArgs> onStarted = args => started.Add(args);
+            Action<LoadingEndedEventArgs> onEnded = args => ended.Add(args);
             NP.LoadingStarted += onStarted;
             NP.LoadingEnded += onEnded;
             try
@@ -334,7 +334,7 @@ namespace NativePrompt.Tests
         {
             var cancellation = new CancellationTokenSource();
             LoadingEndedEventArgs ended = null;
-            EventHandler<LoadingEndedEventArgs> onEnded = (_, args) => ended = args;
+            Action<LoadingEndedEventArgs> onEnded = args => ended = args;
             NP.LoadingEnded += onEnded;
             try
             {
@@ -363,9 +363,9 @@ namespace NativePrompt.Tests
             _strategy.ClearResetCount();
             var order = new List<string>();
             var ended = new List<LoadingEndedEventArgs>();
-            EventHandler<LoadingStartedEventArgs> onStarted = (_, args) =>
+            Action<LoadingStartedEventArgs> onStarted = args =>
                 order.Add("start:" + args.Tag + ":" + args.ActiveCount);
-            EventHandler<LoadingEndedEventArgs> onEnded = (_, args) =>
+            Action<LoadingEndedEventArgs> onEnded = args =>
             {
                 order.Add("end:" + args.Tag + ":" + args.ActiveCount);
                 ended.Add(args);
@@ -405,8 +405,8 @@ namespace NativePrompt.Tests
         {
             int startedCount = 0;
             int endedCount = 0;
-            EventHandler<LoadingStartedEventArgs> onStarted = (_, __) => startedCount++;
-            EventHandler<LoadingEndedEventArgs> onEnded = (_, __) => endedCount++;
+            Action<LoadingStartedEventArgs> onStarted = _ => startedCount++;
+            Action<LoadingEndedEventArgs> onEnded = _ => endedCount++;
             NP.LoadingStarted += onStarted;
             NP.LoadingEnded += onEnded;
             try
@@ -863,19 +863,19 @@ namespace NativePrompt.Tests
             BottomSheetCompletedEventArgs sheetCompleted = null;
             ToastDismissedEventArgs toastDismissed = null;
 
-            EventHandler<AlertOpenedEventArgs> onAlertOpened = (_, args) =>
+            Action<AlertOpenedEventArgs> onAlertOpened = args =>
             {
                 alertOpened = args;
                 order.Add("alert-opened");
             };
-            EventHandler<AlertCompletedEventArgs> onAlertCompleted = (_, args) =>
+            Action<AlertCompletedEventArgs> onAlertCompleted = args =>
             {
                 alertCompleted = args;
                 order.Add("alert-event");
             };
-            EventHandler<BottomSheetCompletedEventArgs> onSheetCompleted = (_, args) =>
+            Action<BottomSheetCompletedEventArgs> onSheetCompleted = args =>
                 sheetCompleted = args;
-            EventHandler<ToastDismissedEventArgs> onToastDismissed = (_, args) =>
+            Action<ToastDismissedEventArgs> onToastDismissed = args =>
                 toastDismissed = args;
 
             NP.AlertOpened += onAlertOpened;
@@ -1003,9 +1003,9 @@ namespace NativePrompt.Tests
             var cancellation = new CancellationTokenSource();
             int callbackCount = 0;
             int eventCount = 0;
-            EventHandler<AlertCompletedEventArgs> onAlert = (_, __) => eventCount++;
-            EventHandler<BottomSheetCompletedEventArgs> onSheet = (_, __) => eventCount++;
-            EventHandler<ToastDismissedEventArgs> onToast = (_, __) => eventCount++;
+            Action<AlertCompletedEventArgs> onAlert = _ => eventCount++;
+            Action<BottomSheetCompletedEventArgs> onSheet = _ => eventCount++;
+            Action<ToastDismissedEventArgs> onToast = _ => eventCount++;
             NP.AlertCompleted += onAlert;
             NP.BottomSheetCompleted += onSheet;
             NP.ToastDismissed += onToast;
@@ -1152,9 +1152,9 @@ namespace NativePrompt.Tests
             _strategy.ClearResetCount();
             int callbackCount = 0;
             int eventCount = 0;
-            EventHandler<AlertCompletedEventArgs> onAlert = (_, __) => eventCount++;
-            EventHandler<BottomSheetCompletedEventArgs> onSheet = (_, __) => eventCount++;
-            EventHandler<ToastDismissedEventArgs> onToast = (_, __) => eventCount++;
+            Action<AlertCompletedEventArgs> onAlert = _ => eventCount++;
+            Action<BottomSheetCompletedEventArgs> onSheet = _ => eventCount++;
+            Action<ToastDismissedEventArgs> onToast = _ => eventCount++;
             NP.AlertCompleted += onAlert;
             NP.BottomSheetCompleted += onSheet;
             NP.ToastDismissed += onToast;
@@ -1204,7 +1204,7 @@ namespace NativePrompt.Tests
             _strategy.ClearResetCount();
             int callbackCount = 0;
             int eventCount = 0;
-            EventHandler<AlertCompletedEventArgs> onCompleted = (_, __) => eventCount++;
+            Action<AlertCompletedEventArgs> onCompleted = _ => eventCount++;
             NP.AlertCompleted += onCompleted;
             try
             {
@@ -1259,7 +1259,7 @@ namespace NativePrompt.Tests
             AlertHandle handle = null;
             int callbackCount = 0;
             int eventCount = 0;
-            EventHandler<AlertCompletedEventArgs> onCompleted = (_, __) => eventCount++;
+            Action<AlertCompletedEventArgs> onCompleted = _ => eventCount++;
             NP.AlertCompleted += onCompleted;
             try
             {
@@ -1348,9 +1348,9 @@ namespace NativePrompt.Tests
         {
             int laterSubscriberCount = 0;
             int secondAlertCount = 0;
-            EventHandler<AlertCompletedEventArgs> throwing = (_, __) =>
+            Action<AlertCompletedEventArgs> throwing = _ =>
                 throw new InvalidOperationException("event failure");
-            EventHandler<AlertCompletedEventArgs> later = (_, __) => laterSubscriberCount++;
+            Action<AlertCompletedEventArgs> later = _ => laterSubscriberCount++;
             NP.AlertCompleted += throwing;
             NP.AlertCompleted += later;
             LogAssert.Expect(LogType.Exception, new Regex("callback failure"));
