@@ -82,6 +82,8 @@ observe all requests of a UI type.
   completion event.
 - `LoadingStarted` means the loading request was accepted. It does not guarantee
   that delayed visual elements are already visible.
+- `IsLoading` exposes whether any Loading request is active, and
+  `LoadingStateChanged` reports only the first-start and last-end transitions.
 
 Because `NP` events are static, listeners must unsubscribe with their own lifecycle.
 Event names, arguments, and examples are listed under

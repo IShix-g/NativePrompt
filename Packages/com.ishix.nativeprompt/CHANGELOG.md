@@ -18,6 +18,8 @@ All notable changes to this package are documented in this file.
 - `NP.LoadingStarted` and `NP.LoadingEnded` request-lifecycle events with request
   metadata, active-request counts, and `Dismissed`, `Disposed`, `Cancelled`, or
   `Reset` end reasons.
+- `NP.IsLoading` and `NP.LoadingStateChanged` for observing the overall Loading
+  state without tracking individual request counts.
 - Loading sample lifecycle output in the result panel and device Console, including
   request metadata, end reason, and active-request count.
 

@@ -40,7 +40,7 @@ public void ConfirmDelete()
 }
 ```
 
-See [Alert](api.md#alert) for all results and queue behavior.
+See [Native Alert](api.md#native-alert) for all results and queue behavior.
 
 ## Let the user choose an action
 
@@ -85,7 +85,8 @@ public void ShowPhotoActions()
 }
 ```
 
-See [Bottom sheet](api.md#bottom-sheet) for action validation and cancellation.
+See [Native Bottom Sheet](api.md#native-bottom-sheet) for action validation and
+cancellation.
 
 ## Keep a toast visible until work finishes
 
@@ -114,7 +115,8 @@ public void EndWork()
 }
 ```
 
-See [Toast](api.md#toast) for automatic dismissal and replacement behavior.
+See [Native Toast](api.md#native-toast) for automatic dismissal and replacement
+behavior.
 
 ## Always end Loading after an asynchronous operation
 
@@ -143,51 +145,50 @@ public async Task SaveWithLoadingAsync()
 }
 ```
 
-See [Loading](api.md#loading) for delayed display and overlapping requests.
+See [Native Loading](api.md#native-loading) for delayed display and overlapping
+requests.
 
-## React when Loading starts and ends
+## Pause application behavior while Loading is active
 
-Use `ActiveCount` to react only when the application's overall Loading state
-changes. A start count of `1` means the first request became active. An end count of
-`0` means the last active request ended.
+Use `LoadingStateChanged` for behavior such as muting audio or pausing selected
+application events. It runs only when the first Loading request starts or the last
+one ends.
 
 ```csharp
 private void OnEnable()
 {
-    NP.LoadingStarted += OnLoadingStarted;
-    NP.LoadingEnded += OnLoadingEnded;
+    NP.LoadingStateChanged += OnLoadingStateChanged;
+    OnLoadingStateChanged(NP.IsLoading);
 }
 
 private void OnDisable()
 {
-    NP.LoadingStarted -= OnLoadingStarted;
-    NP.LoadingEnded -= OnLoadingEnded;
+    NP.LoadingStateChanged -= OnLoadingStateChanged;
 }
 
-private void OnLoadingStarted(LoadingStartedEventArgs args)
+private void OnLoadingStateChanged(bool isLoading)
 {
-    if (args.ActiveCount == 1)
-    {
-        Debug.Log("Loading started");
-    }
+    // Forward this state to your audio or application event service.
+    Debug.Log(isLoading ? "Pause app behavior" : "Resume app behavior");
 }
 
-private void OnLoadingEnded(LoadingEndedEventArgs args)
+private void OnSpecialEvent()
 {
-    if (args.ActiveCount == 0)
+    if (NP.IsLoading)
     {
-        Debug.Log("Loading ended");
+        return;
     }
+
+    Debug.Log("Handle the event");
 }
 ```
 
-Register this observer before creating Loading requests so it receives their start
-events. Replace the logs with logic that should run when the overall Loading state
-starts or ends. These events follow the request lifecycle, so the start event may
-occur before delayed visual elements are visible.
+Calling the handler once from `OnEnable()` also covers a Loading request that was
+already active. `IsLoading` and `LoadingStateChanged` follow request state, so they
+may become active before delayed visual elements are visible.
 
-See [Lifecycle events](api.md#lifecycle-events) for `ActiveCount` and event delivery
-rules.
+See [Lifecycle events](api.md#lifecycle-events) for event delivery rules and the
+request-specific `LoadingStarted` and `LoadingEnded` events.
 
 ## Observe prompts across the application
 

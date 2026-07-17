@@ -78,6 +78,18 @@ namespace NativePrompt
         public static event Action<LoadingEndedEventArgs> LoadingEnded;
 
         /// <summary>
+        /// Occurs when the overall loading state changes between no active requests and one or
+        /// more active requests. The argument is <see langword="true"/> while loading is active.
+        /// </summary>
+        public static event Action<bool> LoadingStateChanged;
+
+        /// <summary>
+        /// Gets whether one or more loading requests are active. This describes request state,
+        /// not whether delayed visual elements are currently visible.
+        /// </summary>
+        public static bool IsLoading => NativePromptRuntime.IsLoading;
+
+        /// <summary>
         /// Shows a native alert.
         /// </summary>
         /// <param name="options">The alert content and button configuration.</param>
@@ -155,8 +167,10 @@ namespace NativePrompt
         internal static void RaiseLoadingEnded(LoadingEndedEventArgs args) =>
             RaiseSafely(LoadingEnded, args);
 
+        internal static void RaiseLoadingStateChanged(bool isLoading) =>
+            RaiseSafely(LoadingStateChanged, isLoading);
+
         private static void RaiseSafely<T>(Action<T> handlers, T args)
-            where T : EventArgs
         {
             if (handlers == null)
             {

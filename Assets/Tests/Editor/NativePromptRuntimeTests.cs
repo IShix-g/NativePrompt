@@ -330,6 +330,66 @@ namespace NativePrompt.Tests
         }
 
         [Test]
+        public void LoadingStateChanged_ReportsOnlyOverallStateTransitions()
+        {
+            var states = new List<bool>();
+            Action<bool> onStateChanged = states.Add;
+            LoadingHandle first = null;
+            LoadingHandle second = null;
+            NP.LoadingStateChanged += onStateChanged;
+            try
+            {
+                Assert.That(NP.IsLoading, Is.False);
+
+                first = NP.ShowLoading(new LoadingOptions { Message = "First" });
+                Assert.That(NP.IsLoading, Is.True);
+                Assert.That(states, Is.EqualTo(new[] { true }));
+
+                second = NP.ShowLoading(new LoadingOptions { Message = "Second" });
+                Assert.That(states, Is.EqualTo(new[] { true }));
+
+                first.Dispose();
+                Assert.That(NP.IsLoading, Is.True);
+                Assert.That(states, Is.EqualTo(new[] { true }));
+
+                second.Dismiss();
+                Assert.That(NP.IsLoading, Is.False);
+                Assert.That(states, Is.EqualTo(new[] { true, false }));
+            }
+            finally
+            {
+                NP.LoadingStateChanged -= onStateChanged;
+                second?.Dispose();
+                first?.Dispose();
+            }
+        }
+
+        [Test]
+        public void LoadingStateChanged_SubscriberExceptionDoesNotStopLaterSubscribers()
+        {
+            int laterSubscriberCount = 0;
+            Action<bool> throwing = _ =>
+                throw new InvalidOperationException("loading state event failure");
+            Action<bool> later = _ => laterSubscriberCount++;
+            LoadingHandle loading = null;
+            NP.LoadingStateChanged += throwing;
+            NP.LoadingStateChanged += later;
+            LogAssert.Expect(LogType.Exception, new Regex("loading state event failure"));
+            try
+            {
+                loading = NP.ShowLoading(new LoadingOptions());
+
+                Assert.That(laterSubscriberCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                NP.LoadingStateChanged -= throwing;
+                NP.LoadingStateChanged -= later;
+                loading?.Dispose();
+            }
+        }
+
+        [Test]
         public void LoadingLifecycleEvent_CancellationReportsCancelled()
         {
             var cancellation = new CancellationTokenSource();
@@ -363,6 +423,7 @@ namespace NativePrompt.Tests
             _strategy.ClearResetCount();
             var order = new List<string>();
             var ended = new List<LoadingEndedEventArgs>();
+            var states = new List<bool>();
             Action<LoadingStartedEventArgs> onStarted = args =>
                 order.Add("start:" + args.Tag + ":" + args.ActiveCount);
             Action<LoadingEndedEventArgs> onEnded = args =>
@@ -370,8 +431,14 @@ namespace NativePrompt.Tests
                 order.Add("end:" + args.Tag + ":" + args.ActiveCount);
                 ended.Add(args);
             };
+            Action<bool> onStateChanged = isLoading =>
+            {
+                states.Add(isLoading);
+                order.Add("state:" + isLoading);
+            };
             NP.LoadingStarted += onStarted;
             NP.LoadingEnded += onEnded;
+            NP.LoadingStateChanged += onStateChanged;
             try
             {
                 NP.ShowLoading(new LoadingOptions { Tag = "first" });
@@ -385,18 +452,23 @@ namespace NativePrompt.Tests
                 Assert.That(order, Is.EqualTo(new[]
                 {
                     "start:first:1",
+                    "state:True",
                     "start:second:2",
                     "end:first:0",
-                    "end:second:0"
+                    "end:second:0",
+                    "state:False"
                 }));
                 Assert.That(ended, Has.Count.EqualTo(2));
                 Assert.That(ended[0].Reason, Is.EqualTo(LoadingEndReason.Reset));
                 Assert.That(ended[1].Reason, Is.EqualTo(LoadingEndReason.Reset));
+                Assert.That(states, Is.EqualTo(new[] { true, false }));
+                Assert.That(NP.IsLoading, Is.False);
             }
             finally
             {
                 NP.LoadingStarted -= onStarted;
                 NP.LoadingEnded -= onEnded;
+                NP.LoadingStateChanged -= onStateChanged;
             }
         }
 
@@ -405,10 +477,13 @@ namespace NativePrompt.Tests
         {
             int startedCount = 0;
             int endedCount = 0;
+            int stateChangedCount = 0;
             Action<LoadingStartedEventArgs> onStarted = _ => startedCount++;
             Action<LoadingEndedEventArgs> onEnded = _ => endedCount++;
+            Action<bool> onStateChanged = _ => stateChangedCount++;
             NP.LoadingStarted += onStarted;
             NP.LoadingEnded += onEnded;
+            NP.LoadingStateChanged += onStateChanged;
             try
             {
                 _strategy.NextShowLoadingException = new InvalidOperationException("failure");
@@ -418,11 +493,14 @@ namespace NativePrompt.Tests
 
                 Assert.That(startedCount, Is.Zero);
                 Assert.That(endedCount, Is.Zero);
+                Assert.That(stateChangedCount, Is.Zero);
+                Assert.That(NP.IsLoading, Is.False);
             }
             finally
             {
                 NP.LoadingStarted -= onStarted;
                 NP.LoadingEnded -= onEnded;
+                NP.LoadingStateChanged -= onStateChanged;
             }
         }
 

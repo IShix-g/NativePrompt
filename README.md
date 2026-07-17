@@ -90,7 +90,7 @@ device.
 
 For common application flows, see [Recipes](docs/recipes.md).
 
-## Native Alert
+## [Native Alert](docs/api.md#native-alert)
 
 ![Native Alert](docs/images/native-alert.jpg)
 
@@ -119,10 +119,10 @@ NP.ShowAlert(
 Alerts are shown one at a time in request order. On Android, the Back button and a
 backdrop tap do not close an alert.
 
-See the [Alert API reference](docs/api.md#alert) for all options, results, queue
-behavior, and manual dismissal.
+See the [Alert API reference](docs/api.md#native-alert) for all options, results,
+queue behavior, and manual dismissal.
 
-## Native Bottom Sheet
+## [Native Bottom Sheet](docs/api.md#native-bottom-sheet)
 
 ![Native Bottom Sheet](docs/images/native-bottom-sheet.jpg)
 
@@ -158,10 +158,10 @@ NP.ShowBottomSheet(
 A cancel button, backdrop tap, or Android Back returns a cancelled result. Disabled
 actions can remain visible without being selectable.
 
-See the [Bottom Sheet API reference](docs/api.md#bottom-sheet) for action options,
-result values, validation, and dismissal behavior.
+See the [Bottom Sheet API reference](docs/api.md#native-bottom-sheet) for action
+options, result values, validation, and dismissal behavior.
 
-## Native Toast
+## [Native Toast](docs/api.md#native-toast)
 
 ![Native Toast](docs/images/native-toast.jpg)
 
@@ -182,10 +182,10 @@ Toasts dismiss automatically after 2.5 seconds by default. Only one toast is
 visible at a time; a new toast replaces the previous one. Keep the returned handle
 when you disable automatic dismissal and need to close the toast yourself.
 
-See the [Toast API reference](docs/api.md#toast) for duration, tap behavior,
+See the [Toast API reference](docs/api.md#native-toast) for duration, tap behavior,
 positions, and dismissal reasons.
 
-## Native Loading
+## [Native Loading](docs/api.md#native-loading)
 
 ![Native Loading](docs/images/native-loading.jpg)
 
@@ -220,10 +220,10 @@ appear after a short delay by default, which avoids flashing the spinner for qui
 operations. Multiple loading handles may coexist; the newest active request controls
 the shared loading view.
 
-See the [Loading API reference](docs/api.md#loading) for appearance options, delayed
-display, overlapping requests, and lifecycle events.
+See the [Loading API reference](docs/api.md#native-loading) for appearance options,
+delayed display, overlapping requests, and lifecycle events.
 
-## Handles
+## [Handles](docs/api.md#handle-lifetime)
 
 Every `Show*()` method returns a handle for that request.
 
@@ -251,7 +251,7 @@ alert.Dismiss();
 See the [Handle lifetime reference](docs/api.md#handle-lifetime) for ownership,
 disposal, metadata, and `AddTo` behavior.
 
-## Lifecycle Events
+## [Lifecycle Events](docs/api.md#lifecycle-events)
 
 Use the callback passed to `Show*()` when only the caller needs the result. Use
 static lifecycle events when another part of the application needs to observe all
@@ -263,6 +263,30 @@ prompts of a type.
 | Bottom Sheet | `NP.BottomSheetOpened` | `NP.BottomSheetCompleted` |
 | Toast | `NP.ToastShown` | `NP.ToastDismissed` |
 | Loading | `NP.LoadingStarted` | `NP.LoadingEnded` |
+
+For application-wide behavior that should change while any Loading request is
+active, use `NP.LoadingStateChanged` and initialize from `NP.IsLoading`:
+
+```csharp
+private void OnEnable()
+{
+    NP.LoadingStateChanged += OnLoadingStateChanged;
+    OnLoadingStateChanged(NP.IsLoading);
+}
+
+private void OnDisable()
+{
+    NP.LoadingStateChanged -= OnLoadingStateChanged;
+}
+
+private void OnLoadingStateChanged(bool isLoading)
+{
+    Debug.Log(isLoading ? "Loading started" : "Loading ended");
+}
+```
+
+Replace the log with application behavior such as muting audio or pausing selected
+events. The event runs only when the first Loading starts or the last one ends.
 
 Subscribe and unsubscribe with the listener's lifecycle because `NP` events are
 static:

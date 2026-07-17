@@ -382,9 +382,13 @@ namespace NativePrompt
             {
                 ReleaseRequest(request);
             }
-            foreach (LoadingRequest request in loadingRequests)
+            for (int i = 0; i < loadingRequests.Count; i++)
             {
-                PostLoadingEnded(request, LoadingEndReason.Reset, 0);
+                PostLoadingEnded(
+                    loadingRequests[i],
+                    LoadingEndReason.Reset,
+                    0,
+                    i == loadingRequests.Count - 1);
             }
             _strategy.Reset();
         }
@@ -666,7 +670,7 @@ namespace NativePrompt
                 }
             }
 
-            PostLoadingEnded(request, reason, activeCount);
+            PostLoadingEnded(request, reason, activeCount, activeCount == 0);
         }
 
         private void PostLoadingStarted(LoadingRequest request, int activeCount)
@@ -676,13 +680,21 @@ namespace NativePrompt
                 request.Tag,
                 request.GroupId,
                 activeCount);
-            _dispatcher.Post(() => NP.RaiseLoadingStarted(args));
+            _dispatcher.Post(() =>
+            {
+                NP.RaiseLoadingStarted(args);
+                if (activeCount == 1)
+                {
+                    NP.RaiseLoadingStateChanged(true);
+                }
+            });
         }
 
         private void PostLoadingEnded(
             LoadingRequest request,
             LoadingEndReason reason,
-            int activeCount)
+            int activeCount,
+            bool loadingStateChanged)
         {
             var args = new LoadingEndedEventArgs(
                 request.RequestId,
@@ -690,7 +702,14 @@ namespace NativePrompt
                 request.GroupId,
                 activeCount,
                 reason);
-            _dispatcher.Post(() => NP.RaiseLoadingEnded(args));
+            _dispatcher.Post(() =>
+            {
+                NP.RaiseLoadingEnded(args);
+                if (loadingStateChanged)
+                {
+                    NP.RaiseLoadingStateChanged(false);
+                }
+            });
         }
 
         private void PostAlertCompletion(AlertRequest request, AlertResult result)

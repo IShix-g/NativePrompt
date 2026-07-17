@@ -19,10 +19,10 @@ For task-oriented examples, see [Recipes](recipes.md).
 
 | UI | Show method | Per-request callback | Handle | Lifecycle events |
 | --- | --- | --- | --- | --- |
-| Alert | `NP.ShowAlert(...)` | `Action<AlertResult>` | `AlertHandle` | `AlertOpened`, `AlertCompleted` |
-| Bottom sheet | `NP.ShowBottomSheet(...)` | `Action<BottomSheetResult>` | `BottomSheetHandle` | `BottomSheetOpened`, `BottomSheetCompleted` |
-| Toast | `NP.ShowToast(...)` | `Action<ToastDismissReason>` | `ToastHandle` | `ToastShown`, `ToastDismissed` |
-| Loading | `NP.ShowLoading(...)` | None | `LoadingHandle` | `LoadingStarted`, `LoadingEnded` |
+| Native Alert | `NP.ShowAlert(...)` | `Action<AlertResult>` | `AlertHandle` | `AlertOpened`, `AlertCompleted` |
+| Native Bottom Sheet | `NP.ShowBottomSheet(...)` | `Action<BottomSheetResult>` | `BottomSheetHandle` | `BottomSheetOpened`, `BottomSheetCompleted` |
+| Native Toast | `NP.ShowToast(...)` | `Action<ToastDismissReason>` | `ToastHandle` | `ToastShown`, `ToastDismissed` |
+| Native Loading | `NP.ShowLoading(...)` | None | `LoadingHandle` | `LoadingStarted`, `LoadingEnded`, `LoadingStateChanged` |
 
 Use the callback passed to `Show*()` when only the caller needs the result. Use a
 static lifecycle event when another part of the application needs to observe all
@@ -73,10 +73,11 @@ for the difference between dismissing and disposing.
 
 ## Lifecycle events
 
-The callback supplied to a `Show*()` method belongs to one request. The events on
+The callback supplied to a `Show*()` method belongs to one request. Most events on
 `NP` are static `Action<TEventArgs>` events and observe every request of that UI
 type. Subscribers receive the event arguments directly; there is no `sender`
-parameter.
+parameter. `LoadingStateChanged` is an `Action<bool>` for the application-wide
+Loading state.
 
 ### Event list
 
@@ -90,8 +91,10 @@ parameter.
 | `NP.ToastDismissed` | `ToastDismissedEventArgs` | The toast times out, is tapped, is replaced, or `Dismiss()` is called | `Reason` |
 | `NP.LoadingStarted` | `LoadingStartedEventArgs` | The loading request is accepted | `ActiveCount` |
 | `NP.LoadingEnded` | `LoadingEndedEventArgs` | The loading request is removed | `ActiveCount`, `Reason` |
+| `NP.LoadingStateChanged` | `bool` | The overall Loading state changes between inactive and active | `true` while one or more requests are active |
 
-All event argument types inherit from `PromptEventArgs` and provide:
+All request-specific event argument types inherit from `PromptEventArgs` and
+provide:
 
 | Property | Meaning |
 | --- | --- |
@@ -140,6 +143,34 @@ public sealed class PromptObserver : MonoBehaviour
 
 Identify a request with `args.RequestId`, `args.Tag`, or `args.GroupId`.
 
+### Observe the overall Loading state
+
+Use `NP.IsLoading` when code only needs the current state. Use
+`NP.LoadingStateChanged` to react when the first Loading request starts or the last
+one ends.
+
+```csharp
+private void OnEnable()
+{
+    NP.LoadingStateChanged += OnLoadingStateChanged;
+    OnLoadingStateChanged(NP.IsLoading);
+}
+
+private void OnDisable()
+{
+    NP.LoadingStateChanged -= OnLoadingStateChanged;
+}
+
+private void OnLoadingStateChanged(bool isLoading)
+{
+    Debug.Log(isLoading ? "Loading started" : "Loading ended");
+}
+```
+
+Calling the handler once from `OnEnable()` applies the current state even when the
+listener becomes enabled after Loading has already started. This state describes
+active requests, not whether delayed visual elements are visible.
+
 ### Delivery rules
 
 - Callbacks and events run on the Unity main thread.
@@ -157,9 +188,10 @@ Identify a request with `args.RequestId`, `args.Tag`, or `args.GroupId`.
 raised after the native strategy accepts the request, even if the spinner is still
 waiting for `ShowDelaySeconds`. A request that ends during that delay still produces
 one `LoadingStarted` event and one `LoadingEnded` event. If native startup throws,
-neither event is raised.
+neither event is raised. `LoadingStateChanged` is raised after the corresponding
+request event and only for the `0 -> 1` and `1 -> 0` active-request transitions.
 
-## Alert
+## Native Alert
 
 ```csharp
 AlertHandle ShowAlert(
@@ -213,7 +245,7 @@ is dismissed completes with `Dismissed` but does not raise `AlertOpened`.
 
 On Android, tapping the backdrop or pressing Back does not dismiss an alert.
 
-## Bottom sheet
+## Native Bottom Sheet
 
 ```csharp
 BottomSheetHandle ShowBottomSheet(
@@ -284,7 +316,7 @@ BottomSheetHandle sheet = NP.ShowBottomSheet(
 The result is cancelled when the user taps the background, presses Android Back,
 selects Cancel, or when `BottomSheetHandle.Dismiss()` is called.
 
-## Toast
+## Native Toast
 
 ```csharp
 ToastHandle ShowToast(
@@ -331,7 +363,7 @@ Toast positions account for the platform safe area.
 Replacing a toast completes the old callback and raises `ToastDismissed` with
 `Reason == ToastDismissReason.Replaced`.
 
-## Loading
+## Native Loading
 
 ```csharp
 LoadingHandle ShowLoading(LoadingOptions options)
@@ -339,7 +371,7 @@ LoadingHandle ShowLoading(LoadingOptions options)
 
 Starts a request-scoped loading overlay and returns immediately. Loading has no
 per-request callback; observe `LoadingStarted` and `LoadingEnded` when lifecycle
-notifications are needed.
+details are needed. Use `IsLoading` and `LoadingStateChanged` for the overall state.
 
 ```csharp
 LoadingHandle loading = NP.ShowLoading(new LoadingOptions
@@ -411,6 +443,7 @@ settings.
 - Ending the newest request restores the next-newest active request.
 - Restoring an older request does not raise another `LoadingStarted` event.
 - `LoadingEndedEventArgs.ActiveCount == 0` means that no loading requests remain.
+- `NP.IsLoading` is `true` whenever one or more loading requests are active.
 
 `LoadingEndedEventArgs.Reason` is one of:
 

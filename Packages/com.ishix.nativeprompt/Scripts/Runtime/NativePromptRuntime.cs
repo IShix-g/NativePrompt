@@ -100,6 +100,9 @@ namespace NativePrompt
         internal static int ActiveLoadingCountForTesting =>
             GetCurrentCoordinator()?.ActiveLoadingCount ?? 0;
 
+        internal static bool IsLoading =>
+            (GetCurrentCoordinator()?.ActiveLoadingCount ?? 0) > 0;
+
         private static NativePromptCoordinator GetCoordinator()
         {
             lock (Gate)
