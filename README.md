@@ -76,27 +76,9 @@ For common application flows, see [Recipes](docs/recipes.md).
 
 ## Unity Editor Preview
 
-Alert, Bottom Sheet, Toast, and Loading are rendered directly over the Game view
-while running in the Unity Editor. They are visual, interactive previews rather
-than Console-only substitutes:
-
-- Alert uses an iOS-inspired white dialog with working buttons and callbacks.
-- Bottom Sheet uses white action groups, destructive and disabled states, a
-  separate cancel action, and backdrop cancellation.
-- Toast uses a dark pill-shaped view with automatic, tap, and manual dismissal.
-- Loading uses an animated spinner and reflects its size, position, message,
-  delayed display, background, and interaction-blocking options.
-
-The preview uses a UI Toolkit panel with sorting order `32760` so it appears above
-ordinary Game view UI. Its UXML, USS, and theme are stored under the package's
-`Editor` directory and loaded through `AssetDatabase`. They are not stored in
-`Resources` or `StreamingAssets`, are not referenced by scenes, and are not included
-in player builds. Console messages may still be emitted for diagnostics, but they
-are not the Editor presentation.
-
-The Editor preview follows the iOS presentation as a practical design reference.
-Confirm final native appearance and interaction on physical iOS and Android
-devices.
+Alert, Bottom Sheet, Toast, and Loading have interactive, iOS-inspired previews in
+the Game view while running in the Unity Editor. Preview assets are Editor-only and
+loaded through `AssetDatabase`, so they are not included in player builds.
 
 ## [Native Alert](docs/api.md#native-alert)
 
