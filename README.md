@@ -151,7 +151,11 @@ NP.ShowBottomSheet(
         Title = "Photo",
         Actions = new[]
         {
-            new BottomSheetAction { Id = "share", Text = "Share" },
+            new BottomSheetAction
+            {
+                Id = "share",
+                Text = "Share"
+            },
             new BottomSheetAction
             {
                 Id = "delete",
@@ -182,7 +186,11 @@ private async Awaitable ShowPhotoActionsAsync()
             Title = "Photo",
             Actions = new[]
             {
-                new BottomSheetAction { Id = "share", Text = "Share" },
+                new BottomSheetAction
+                {
+                    Id = "share",
+                    Text = "Share"
+                },
                 new BottomSheetAction
                 {
                     Id = "delete",

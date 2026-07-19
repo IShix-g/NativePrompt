@@ -56,7 +56,11 @@ public void ShowPhotoActions()
             Title = "Photo",
             Actions = new[]
             {
-                new BottomSheetAction { Id = "share", Text = "Share" },
+                new BottomSheetAction
+                {
+                    Id = "share",
+                    Text = "Share"
+                },
                 new BottomSheetAction
                 {
                     Id = "delete",

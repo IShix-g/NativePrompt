@@ -330,7 +330,11 @@ BottomSheetHandle sheet = NP.ShowBottomSheet(
         Content = "Choose an action",
         Actions = new[]
         {
-            new BottomSheetAction { Id = "share", Text = "Share" },
+            new BottomSheetAction
+            {
+                Id = "share",
+                Text = "Share"
+            },
             new BottomSheetAction
             {
                 Id = "delete",
@@ -363,7 +367,11 @@ BottomSheetResult result = await NP.ShowBottomSheetAsync(
         Content = "Choose an action",
         Actions = new[]
         {
-            new BottomSheetAction { Id = "share", Text = "Share" },
+            new BottomSheetAction
+            {
+                Id = "share",
+                Text = "Share"
+            },
             new BottomSheetAction
             {
                 Id = "delete",
