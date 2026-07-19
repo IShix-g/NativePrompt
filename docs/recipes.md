@@ -88,6 +88,48 @@ public void ShowPhotoActions()
 See [Native Bottom Sheet](api.md#native-bottom-sheet) for action validation and
 cancellation.
 
+## Serialize prompt decisions with Awaitable
+
+Use the optional Awaitable API when later prompts or application work depend on an
+earlier result. Passing `destroyCancellationToken` silently dismisses the active
+prompt and cancels the await if this `MonoBehaviour` is destroyed, including during
+a scene unload.
+
+```csharp
+public async Awaitable DeleteWithFeedbackAsync()
+{
+    AlertResult result = await NP.ShowAlertAsync(
+        new AlertOptions
+        {
+            Title = "Delete save?",
+            Content = "This cannot be undone.",
+            YesButtonText = "Delete",
+            NoButtonText = "Keep"
+        },
+        destroyCancellationToken);
+
+    if (result != AlertResult.Yes)
+    {
+        return;
+    }
+
+    DeleteSave();
+
+    await NP.ShowToastAsync(
+        new ToastOptions
+        {
+            Message = "Save deleted",
+            Position = ToastPosition.Bottom
+        },
+        destroyCancellationToken);
+}
+```
+
+Each Unity `Awaitable` instance can be awaited only once. Call `Show*Async()` again
+when a new request is needed. Cancellation, including destruction of the owner,
+throws `OperationCanceledException`; see [Awaitable lifetime and
+cancellation](api.md#awaitable-lifetime-and-cancellation) for the full contract.
+
 ## Keep a toast visible until work finishes
 
 Disable automatic and tap dismissal, keep the handle, and close that specific toast

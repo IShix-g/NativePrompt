@@ -106,6 +106,31 @@ NP.ShowAlert(
     .AddTo(this);
 ```
 
+<details>
+<summary>Optional: view the Awaitable version</summary>
+
+```csharp
+private async Awaitable DeleteSaveWithConfirmationAsync()
+{
+    AlertResult result = await NP.ShowAlertAsync(
+        new AlertOptions
+        {
+            Title = "Delete save?",
+            Content = "This cannot be undone.",
+            YesButtonText = "Delete",
+            NoButtonText = "Keep"
+        },
+        destroyCancellationToken);
+
+    if (result == AlertResult.Yes)
+    {
+        DeleteSave();
+    }
+}
+```
+
+</details>
+
 Alerts are shown one at a time in request order. On Android, the Back button and a
 backdrop tap do not close an alert.
 
@@ -145,6 +170,38 @@ NP.ShowBottomSheet(
     .AddTo(this);
 ```
 
+<details>
+<summary>Optional: view the Awaitable version</summary>
+
+```csharp
+private async Awaitable ShowPhotoActionsAsync()
+{
+    BottomSheetResult result = await NP.ShowBottomSheetAsync(
+        new BottomSheetOptions
+        {
+            Title = "Photo",
+            Actions = new[]
+            {
+                new BottomSheetAction { Id = "share", Text = "Share" },
+                new BottomSheetAction
+                {
+                    Id = "delete",
+                    Text = "Delete",
+                    Style = BottomSheetActionStyle.Destructive
+                }
+            }
+        },
+        destroyCancellationToken);
+
+    if (!result.IsCancelled)
+    {
+        RunPhotoAction(result.ActionId);
+    }
+}
+```
+
+</details>
+
 A cancel button, backdrop tap, or Android Back returns a cancelled result. Disabled
 actions can remain visible without being selectable.
 
@@ -167,6 +224,26 @@ NP.ShowToast(
     reason => Debug.Log($"Toast dismissed: {reason}"))
     .AddTo(this);
 ```
+
+<details>
+<summary>Optional: view the Awaitable version</summary>
+
+```csharp
+private async Awaitable ShowSavedToastAsync()
+{
+    ToastDismissReason reason = await NP.ShowToastAsync(
+        new ToastOptions
+        {
+            Message = "Saved",
+            Position = ToastPosition.Bottom
+        },
+        destroyCancellationToken);
+
+    Debug.Log($"Toast dismissed: {reason}");
+}
+```
+
+</details>
 
 Toasts dismiss automatically after 2.5 seconds by default. Only one toast is
 visible at a time; a new toast replaces the previous one. Keep the returned handle

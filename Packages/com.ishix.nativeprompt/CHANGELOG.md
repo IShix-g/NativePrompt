@@ -6,6 +6,10 @@ All notable changes to this package are documented in this file.
 
 ### Added
 
+- Optional Unity Awaitable APIs for Alert, Bottom Sheet, and Toast, including
+  cancellation and Runtime Reset behavior, folded README examples, API reference,
+  and a sequential-use recipe.
+
 - `NP.ShowLoading`, `LoadingOptions`, `LoadingHandle`, five safe-area-aware
   positions, three native spinner sizes, optional message/background, independent
   interaction blocking, and unscaled visual delay on iOS, Android, and Editor.

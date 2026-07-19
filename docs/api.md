@@ -11,26 +11,43 @@ assembly.
 using NativePrompt;
 ```
 
-NativePrompt is callback-based. It does not expose a `Task`-based API.
+NativePrompt keeps callbacks and handles as its primary API. Alert, Bottom Sheet,
+and Toast also provide optional Unity `Awaitable` methods; there is no `Task`-based
+API. Loading remains handle-based because its lifetime is owned explicitly by the
+caller.
 
-For task-oriented examples, see [Recipes](recipes.md).
+For application-flow examples, see [Recipes](recipes.md).
 
 ## API at a glance
 
-| UI | Show method | Per-request callback | Handle | Lifecycle events |
-| --- | --- | --- | --- | --- |
-| Native Alert | `NP.ShowAlert(...)` | `Action<AlertResult>` | `AlertHandle` | `AlertOpened`, `AlertCompleted` |
-| Native Bottom Sheet | `NP.ShowBottomSheet(...)` | `Action<BottomSheetResult>` | `BottomSheetHandle` | `BottomSheetOpened`, `BottomSheetCompleted` |
-| Native Toast | `NP.ShowToast(...)` | `Action<ToastDismissReason>` | `ToastHandle` | `ToastShown`, `ToastDismissed` |
-| Native Loading | `NP.ShowLoading(...)` | None | `LoadingHandle` | `LoadingStarted`, `LoadingEnded`, `LoadingStateChanged` |
+| UI | Show method | Optional Awaitable method | Per-request callback | Handle | Lifecycle events |
+| --- | --- | --- | --- | --- | --- |
+| Native Alert | `NP.ShowAlert(...)` | `NP.ShowAlertAsync(...)` | `Action<AlertResult>` | `AlertHandle` | `AlertOpened`, `AlertCompleted` |
+| Native Bottom Sheet | `NP.ShowBottomSheet(...)` | `NP.ShowBottomSheetAsync(...)` | `Action<BottomSheetResult>` | `BottomSheetHandle` | `BottomSheetOpened`, `BottomSheetCompleted` |
+| Native Toast | `NP.ShowToast(...)` | `NP.ShowToastAsync(...)` | `Action<ToastDismissReason>` | `ToastHandle` | `ToastShown`, `ToastDismissed` |
+| Native Loading | `NP.ShowLoading(...)` | None | None | `LoadingHandle` | `LoadingStarted`, `LoadingEnded`, `LoadingStateChanged` |
 
 Use the callback passed to `Show*()` when only the caller needs the result. Use a
 static lifecycle event when another part of the application needs to observe all
 prompts of that type, for example for analytics or application-wide state.
 
-Every `Show*()` call returns a handle. Keep the handle if you need to dismiss the
-prompt later, or bind it to a `MonoBehaviour` with `AddTo(this)` so it is cleaned up
-when its owner is destroyed.
+Every callback-based `Show*()` call returns a handle. Keep the handle if you need to
+dismiss the prompt later, or bind it to a `MonoBehaviour` with `AddTo(this)` so it
+is cleaned up when its owner is destroyed.
+
+### Awaitable lifetime and cancellation
+
+Each `Show*Async()` call returns a new Unity `Awaitable<T>` and does not return a
+handle or accept a callback. Unity `Awaitable` instances can be awaited only once;
+do not cache one for multiple awaits or await the same instance from multiple
+callers.
+
+If the supplied `CancellationToken` is already cancelled, the prompt is not shown.
+If it is cancelled later, NativePrompt silently removes or dismisses that request.
+In both cases, awaiting the result throws `OperationCanceledException`. Runtime
+Reset also removes every active or queued Awaitable request and completes each await
+by throwing `OperationCanceledException`. Use a `MonoBehaviour`'s
+`destroyCancellationToken` to prevent a prompt from outliving its owner.
 
 ## Quick start
 
@@ -202,6 +219,20 @@ AlertHandle ShowAlert(
 Shows a native alert. `Content` is required. If neither a Yes nor No button is
 provided, NativePrompt shows one close button.
 
+The optional Awaitable form has the following signature:
+
+```csharp
+Awaitable<AlertResult> ShowAlertAsync(
+    AlertOptions options,
+    CancellationToken cancellationToken = default)
+```
+
+It returns the same `AlertResult` values as the callback form. Passing `null` for
+`options` throws `ArgumentNullException`; missing or whitespace-only `Content`
+throws `ArgumentException`. Cancellation and Runtime Reset throw
+`OperationCanceledException` when the result is awaited. If the native prompt fails
+to start, that exception is propagated by the await.
+
 ```csharp
 AlertHandle alert = NP.ShowAlert(
     new AlertOptions
@@ -214,6 +245,26 @@ AlertHandle alert = NP.ShowAlert(
     },
     result => Debug.Log($"Alert result: {result}"));
 ```
+
+<details>
+<summary>Optional: view the Awaitable example</summary>
+
+```csharp
+AlertResult result = await NP.ShowAlertAsync(
+    new AlertOptions
+    {
+        Title = "Delete save?",
+        Content = "This cannot be undone.",
+        YesButtonText = "Delete",
+        NoButtonText = "Keep",
+        Tag = "delete-confirmation"
+    },
+    destroyCancellationToken);
+
+Debug.Log($"Alert result: {result}");
+```
+
+</details>
 
 ### `AlertOptions`
 
@@ -256,6 +307,21 @@ BottomSheetHandle ShowBottomSheet(
 Shows an action sheet with one to three actions. Each action needs a unique ID and
 display text.
 
+The optional Awaitable form has the following signature:
+
+```csharp
+Awaitable<BottomSheetResult> ShowBottomSheetAsync(
+    BottomSheetOptions options,
+    CancellationToken cancellationToken = default)
+```
+
+It returns the same `BottomSheetResult` as the callback form. Passing `null` for
+`options` throws `ArgumentNullException`. An action count outside one to three, a
+null action, a missing or whitespace-only action ID or text, or duplicate action
+IDs throws `ArgumentException`. Cancellation and Runtime Reset throw
+`OperationCanceledException` when the result is awaited. If the native prompt fails
+to start, that exception is propagated by the await.
+
 ```csharp
 BottomSheetHandle sheet = NP.ShowBottomSheet(
     new BottomSheetOptions
@@ -285,6 +351,34 @@ BottomSheetHandle sheet = NP.ShowBottomSheet(
         Debug.Log($"Selected: {result.ActionId}");
     });
 ```
+
+<details>
+<summary>Optional: view the Awaitable example</summary>
+
+```csharp
+BottomSheetResult result = await NP.ShowBottomSheetAsync(
+    new BottomSheetOptions
+    {
+        Title = "Photo",
+        Content = "Choose an action",
+        Actions = new[]
+        {
+            new BottomSheetAction { Id = "share", Text = "Share" },
+            new BottomSheetAction
+            {
+                Id = "delete",
+                Text = "Delete",
+                Style = BottomSheetActionStyle.Destructive
+            }
+        },
+        CancelButtonText = "Cancel"
+    },
+    destroyCancellationToken);
+
+Debug.Log(result.IsCancelled ? "Cancelled" : $"Selected: {result.ActionId}");
+```
+
+</details>
 
 ### `BottomSheetOptions`
 
@@ -327,6 +421,21 @@ ToastHandle ShowToast(
 Shows a transient message. Only one toast can be visible at a time; showing a new
 toast replaces the current toast.
 
+The optional Awaitable form has the following signature:
+
+```csharp
+Awaitable<ToastDismissReason> ShowToastAsync(
+    ToastOptions options,
+    CancellationToken cancellationToken = default)
+```
+
+It returns the same `ToastDismissReason` values as the callback form. Passing
+`null` for `options` throws `ArgumentNullException`. A missing or whitespace-only
+`Message`, or a non-finite or non-positive `Duration` while `AutoDismiss` is
+enabled, throws `ArgumentException`. Cancellation and Runtime Reset throw
+`OperationCanceledException` when the result is awaited. If the native prompt fails
+to start, that exception is propagated by the await.
+
 ```csharp
 ToastHandle toast = NP.ShowToast(
     new ToastOptions
@@ -336,6 +445,23 @@ ToastHandle toast = NP.ShowToast(
     },
     reason => Debug.Log($"Toast dismissed: {reason}"));
 ```
+
+<details>
+<summary>Optional: view the Awaitable example</summary>
+
+```csharp
+ToastDismissReason reason = await NP.ShowToastAsync(
+    new ToastOptions
+    {
+        Message = "Saved",
+        Position = ToastPosition.Bottom
+    },
+    destroyCancellationToken);
+
+Debug.Log($"Toast dismissed: {reason}");
+```
+
+</details>
 
 ### `ToastOptions`
 
