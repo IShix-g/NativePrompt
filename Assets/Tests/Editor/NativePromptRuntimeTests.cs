@@ -1612,6 +1612,235 @@ namespace NativePrompt.Tests
             Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.Zero);
         }
 
+        [Test]
+        public void AsyncApis_ReturnAlertBottomSheetAndToastResults()
+        {
+            Awaitable<AlertResult> alert = NP.ShowAlertAsync(
+                new AlertOptions { Content = "Alert" });
+            Awaitable<BottomSheetResult> bottomSheet = NP.ShowBottomSheetAsync(
+                CreateBottomSheet("save"));
+            Awaitable<ToastDismissReason> toast = NP.ShowToastAsync(
+                new ToastOptions { Message = "Toast" });
+
+            NativePromptCallbackReceiver.AlertCompleted(
+                _strategy.Alerts[0].RequestId,
+                AlertResult.Yes);
+            NativePromptCallbackReceiver.BottomSheetActionSelected(
+                _strategy.BottomSheets[0].RequestId,
+                "save");
+            NativePromptCallbackReceiver.ToastDismissed(
+                _strategy.Toasts[0].RequestId,
+                ToastDismissReason.Tapped);
+
+            Awaitable<AlertResult>.Awaiter alertAwaiter = alert.GetAwaiter();
+            Awaitable<BottomSheetResult>.Awaiter bottomSheetAwaiter =
+                bottomSheet.GetAwaiter();
+            Awaitable<ToastDismissReason>.Awaiter toastAwaiter = toast.GetAwaiter();
+            Assert.That(alertAwaiter.IsCompleted, Is.True);
+            Assert.That(alertAwaiter.GetResult(), Is.EqualTo(AlertResult.Yes));
+            Assert.That(bottomSheetAwaiter.IsCompleted, Is.True);
+            BottomSheetResult bottomSheetResult = bottomSheetAwaiter.GetResult();
+            Assert.That(bottomSheetResult.ActionId, Is.EqualTo("save"));
+            Assert.That(bottomSheetResult.IsCancelled, Is.False);
+            Assert.That(toastAwaiter.IsCompleted, Is.True);
+            Assert.That(toastAwaiter.GetResult(), Is.EqualTo(ToastDismissReason.Tapped));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void AsyncResult_WaitsForDispatcherAndIgnoresDuplicateAndUnknownNotifications()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            Awaitable<AlertResult> alert = NP.ShowAlertAsync(
+                new AlertOptions { Content = "Alert" });
+            Awaitable<AlertResult>.Awaiter awaiter = alert.GetAwaiter();
+            string requestId = _strategy.Alerts[0].RequestId;
+
+            NativePromptCallbackReceiver.AlertCompleted(requestId, AlertResult.No);
+            NativePromptCallbackReceiver.AlertCompleted(requestId, AlertResult.Yes);
+            NativePromptCallbackReceiver.AlertCompleted("unknown", AlertResult.Closed);
+
+            Assert.That(awaiter.IsCompleted, Is.False);
+            Assert.That(queuedDispatcher.Count, Is.EqualTo(1));
+            queuedDispatcher.Drain();
+
+            Assert.That(awaiter.IsCompleted, Is.True);
+            Assert.That(awaiter.GetResult(), Is.EqualTo(AlertResult.No));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
+        [Test]
+        public void AsyncCancellation_DismissesRequestsAndCompletesThroughDispatcher()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            var alertCancellation = new CancellationTokenSource();
+            var bottomSheetCancellation = new CancellationTokenSource();
+            var toastCancellation = new CancellationTokenSource();
+            Awaitable<AlertResult>.Awaiter alertAwaiter = NP.ShowAlertAsync(
+                new AlertOptions { Content = "Alert" },
+                alertCancellation.Token).GetAwaiter();
+            Awaitable<BottomSheetResult>.Awaiter bottomSheetAwaiter =
+                NP.ShowBottomSheetAsync(
+                    CreateBottomSheet("save"),
+                    bottomSheetCancellation.Token).GetAwaiter();
+            Awaitable<ToastDismissReason>.Awaiter toastAwaiter = NP.ShowToastAsync(
+                new ToastOptions { Message = "Toast" },
+                toastCancellation.Token).GetAwaiter();
+
+            alertCancellation.Cancel();
+            bottomSheetCancellation.Cancel();
+            toastCancellation.Cancel();
+
+            Assert.That(alertAwaiter.IsCompleted, Is.False);
+            Assert.That(bottomSheetAwaiter.IsCompleted, Is.False);
+            Assert.That(toastAwaiter.IsCompleted, Is.False);
+            Assert.That(_strategy.DismissedAlertIds, Is.Empty);
+            Assert.That(_strategy.DismissedBottomSheetIds, Is.Empty);
+            Assert.That(_strategy.DismissedToastIds, Is.Empty);
+
+            queuedDispatcher.Drain();
+
+            Assert.That(_strategy.DismissedAlertIds, Has.Count.EqualTo(1));
+            Assert.That(_strategy.DismissedBottomSheetIds, Has.Count.EqualTo(1));
+            Assert.That(_strategy.DismissedToastIds, Has.Count.EqualTo(1));
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+            Assert.Throws<OperationCanceledException>(() => alertAwaiter.GetResult());
+            Assert.Throws<OperationCanceledException>(() => bottomSheetAwaiter.GetResult());
+            Assert.Throws<OperationCanceledException>(() => toastAwaiter.GetResult());
+        }
+
+        [Test]
+        public void AsyncPreCanceledTokens_DoNotShowAndCancelThroughDispatcher()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+
+            Awaitable<AlertResult>.Awaiter alertAwaiter = NP.ShowAlertAsync(
+                new AlertOptions { Content = "Alert" },
+                cancellation.Token).GetAwaiter();
+            Awaitable<BottomSheetResult>.Awaiter bottomSheetAwaiter =
+                NP.ShowBottomSheetAsync(
+                    CreateBottomSheet("save"),
+                    cancellation.Token).GetAwaiter();
+            Awaitable<ToastDismissReason>.Awaiter toastAwaiter = NP.ShowToastAsync(
+                new ToastOptions { Message = "Toast" },
+                cancellation.Token).GetAwaiter();
+
+            Assert.That(_strategy.Alerts, Is.Empty);
+            Assert.That(_strategy.BottomSheets, Is.Empty);
+            Assert.That(_strategy.Toasts, Is.Empty);
+            Assert.That(alertAwaiter.IsCompleted, Is.False);
+            Assert.That(bottomSheetAwaiter.IsCompleted, Is.False);
+            Assert.That(toastAwaiter.IsCompleted, Is.False);
+
+            queuedDispatcher.Drain();
+
+            Assert.Throws<OperationCanceledException>(() => alertAwaiter.GetResult());
+            Assert.Throws<OperationCanceledException>(() => bottomSheetAwaiter.GetResult());
+            Assert.Throws<OperationCanceledException>(() => toastAwaiter.GetResult());
+        }
+
+        [Test]
+        public void AsyncReset_CancelsActiveQueuedAndIndependentRequests()
+        {
+            var queuedDispatcher = new QueuedDispatcher();
+            NativePromptRuntime.SetForTesting(_strategy, queuedDispatcher);
+            _strategy.ClearResetCount();
+            Awaitable<AlertResult>.Awaiter activeAlert = NP.ShowAlertAsync(
+                new AlertOptions { Content = "Active" }).GetAwaiter();
+            Awaitable<AlertResult>.Awaiter queuedAlert = NP.ShowAlertAsync(
+                new AlertOptions { Content = "Queued" }).GetAwaiter();
+            Awaitable<BottomSheetResult>.Awaiter bottomSheet = NP.ShowBottomSheetAsync(
+                CreateBottomSheet("save")).GetAwaiter();
+            Awaitable<ToastDismissReason>.Awaiter toast = NP.ShowToastAsync(
+                new ToastOptions { Message = "Toast" }).GetAwaiter();
+
+            NativePromptRuntime.Reset();
+
+            Assert.That(activeAlert.IsCompleted, Is.False);
+            Assert.That(queuedAlert.IsCompleted, Is.False);
+            Assert.That(bottomSheet.IsCompleted, Is.False);
+            Assert.That(toast.IsCompleted, Is.False);
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+            queuedDispatcher.Drain();
+
+            Assert.Throws<OperationCanceledException>(() => activeAlert.GetResult());
+            Assert.Throws<OperationCanceledException>(() => queuedAlert.GetResult());
+            Assert.Throws<OperationCanceledException>(() => bottomSheet.GetResult());
+            Assert.Throws<OperationCanceledException>(() => toast.GetResult());
+            Assert.That(_strategy.ResetCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AsyncRequests_PreserveAlertFifoToastReplacementAndBottomSheetIdentity()
+        {
+            Awaitable<AlertResult>.Awaiter firstAlert = NP.ShowAlertAsync(
+                new AlertOptions { Content = "First" }).GetAwaiter();
+            Awaitable<AlertResult>.Awaiter secondAlert = NP.ShowAlertAsync(
+                new AlertOptions { Content = "Second" }).GetAwaiter();
+            Assert.That(_strategy.Alerts, Has.Count.EqualTo(1));
+            NativePromptCallbackReceiver.AlertCompleted(
+                _strategy.Alerts[0].RequestId,
+                AlertResult.Closed);
+            Assert.That(firstAlert.GetResult(), Is.EqualTo(AlertResult.Closed));
+            Assert.That(_strategy.Alerts, Has.Count.EqualTo(2));
+            NativePromptCallbackReceiver.AlertCompleted(
+                _strategy.Alerts[1].RequestId,
+                AlertResult.Yes);
+            Assert.That(secondAlert.GetResult(), Is.EqualTo(AlertResult.Yes));
+
+            Awaitable<ToastDismissReason>.Awaiter firstToast = NP.ShowToastAsync(
+                new ToastOptions { Message = "First" }).GetAwaiter();
+            Awaitable<ToastDismissReason>.Awaiter secondToast = NP.ShowToastAsync(
+                new ToastOptions { Message = "Second" }).GetAwaiter();
+            Assert.That(firstToast.GetResult(), Is.EqualTo(ToastDismissReason.Replaced));
+            NativePromptCallbackReceiver.ToastDismissed(
+                _strategy.Toasts[1].RequestId,
+                ToastDismissReason.TimedOut);
+            Assert.That(secondToast.GetResult(), Is.EqualTo(ToastDismissReason.TimedOut));
+
+            Awaitable<BottomSheetResult>.Awaiter firstSheet = NP.ShowBottomSheetAsync(
+                CreateBottomSheet("first")).GetAwaiter();
+            Awaitable<BottomSheetResult>.Awaiter secondSheet = NP.ShowBottomSheetAsync(
+                CreateBottomSheet("second")).GetAwaiter();
+            NativePromptCallbackReceiver.BottomSheetActionSelected(
+                _strategy.BottomSheets[1].RequestId,
+                "second");
+            NativePromptCallbackReceiver.BottomSheetCancelled(
+                _strategy.BottomSheets[0].RequestId);
+            Assert.That(secondSheet.GetResult().ActionId, Is.EqualTo("second"));
+            Assert.That(firstSheet.GetResult().IsCancelled, Is.True);
+        }
+
+        [Test]
+        public void AsyncShowExceptions_PropagateAndLeaveNoPendingRequests()
+        {
+            _strategy.NextShowAlertException = new InvalidOperationException("alert");
+            Awaitable<AlertResult>.Awaiter alert = NP.ShowAlertAsync(
+                new AlertOptions { Content = "Alert" }).GetAwaiter();
+            Assert.Throws<InvalidOperationException>(() => alert.GetResult());
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+
+            _strategy.NextShowBottomSheetException = new InvalidOperationException("sheet");
+            Awaitable<BottomSheetResult>.Awaiter bottomSheet = NP.ShowBottomSheetAsync(
+                CreateBottomSheet("save")).GetAwaiter();
+            Assert.Throws<InvalidOperationException>(() => bottomSheet.GetResult());
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+
+            _strategy.NextShowToastException = new InvalidOperationException("toast");
+            Awaitable<ToastDismissReason>.Awaiter toast = NP.ShowToastAsync(
+                new ToastOptions { Message = "Toast" }).GetAwaiter();
+            Assert.Throws<InvalidOperationException>(() => toast.GetResult());
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+        }
+
         private static BottomSheetOptions CreateBottomSheet(string id)
         {
             return new BottomSheetOptions
@@ -1647,7 +1876,13 @@ namespace NativePrompt.Tests
 
             internal Action OnDismissAlert { get; set; }
 
-            internal Exception NextShowLoadingException { get; set; }
+            internal Exception NextShowLoadingException;
+
+            internal Exception NextShowAlertException;
+
+            internal Exception NextShowBottomSheetException;
+
+            internal Exception NextShowToastException;
 
             internal void ClearResetCount()
             {
@@ -1657,6 +1892,7 @@ namespace NativePrompt.Tests
             public void ShowAlert(string requestId, AlertOptions options)
             {
                 Alerts.Add(new AlertCall(requestId, options));
+                ThrowNext(ref NextShowAlertException);
             }
 
             public void DismissAlert(string requestId)
@@ -1672,6 +1908,7 @@ namespace NativePrompt.Tests
             public void ShowBottomSheet(string requestId, BottomSheetOptions options)
             {
                 BottomSheets.Add(new BottomSheetCall(requestId, options));
+                ThrowNext(ref NextShowBottomSheetException);
             }
 
             public void DismissBottomSheet(string requestId)
@@ -1682,6 +1919,7 @@ namespace NativePrompt.Tests
             public void ShowToast(string requestId, ToastOptions options)
             {
                 Toasts.Add(new ToastCall(requestId, options));
+                ThrowNext(ref NextShowToastException);
             }
 
             public void DismissToast(string requestId)
@@ -1708,6 +1946,16 @@ namespace NativePrompt.Tests
             public void Reset()
             {
                 ResetCount++;
+            }
+
+            private static void ThrowNext(ref Exception exception)
+            {
+                Exception current = exception;
+                exception = null;
+                if (current != null)
+                {
+                    throw current;
+                }
             }
         }
 

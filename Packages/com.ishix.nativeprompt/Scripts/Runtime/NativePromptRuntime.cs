@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using UnityEngine;
 
 namespace NativePrompt
@@ -13,6 +14,13 @@ namespace NativePrompt
             return GetCoordinator().ShowAlert(options, onCompleted);
         }
 
+        internal static Awaitable<AlertResult> ShowAlertAsync(
+            AlertOptions options,
+            CancellationToken cancellationToken)
+        {
+            return GetCoordinator().ShowAlertAsync(options, cancellationToken);
+        }
+
         internal static BottomSheetHandle ShowBottomSheet(
             BottomSheetOptions options,
             Action<BottomSheetResult> onCompleted)
@@ -20,11 +28,25 @@ namespace NativePrompt
             return GetCoordinator().ShowBottomSheet(options, onCompleted);
         }
 
+        internal static Awaitable<BottomSheetResult> ShowBottomSheetAsync(
+            BottomSheetOptions options,
+            CancellationToken cancellationToken)
+        {
+            return GetCoordinator().ShowBottomSheetAsync(options, cancellationToken);
+        }
+
         internal static ToastHandle ShowToast(
             ToastOptions options,
             Action<ToastDismissReason> onDismissed)
         {
             return GetCoordinator().ShowToast(options, onDismissed);
+        }
+
+        internal static Awaitable<ToastDismissReason> ShowToastAsync(
+            ToastOptions options,
+            CancellationToken cancellationToken)
+        {
+            return GetCoordinator().ShowToastAsync(options, cancellationToken);
         }
 
         internal static LoadingHandle ShowLoading(LoadingOptions options)

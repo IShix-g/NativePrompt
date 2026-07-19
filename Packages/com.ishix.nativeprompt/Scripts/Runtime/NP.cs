@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using UnityEngine;
 
 namespace NativePrompt
@@ -103,6 +104,23 @@ namespace NativePrompt
         }
 
         /// <summary>
+        /// Shows a native alert and returns an awaitable that completes after the alert is closed.
+        /// </summary>
+        /// <param name="options">The alert content and button configuration.</param>
+        /// <param name="cancellationToken">
+        /// A token that silently dismisses the alert and cancels the awaitable.
+        /// </param>
+        /// <returns>An awaitable that produces the alert result.</returns>
+        public static Awaitable<AlertResult> ShowAlertAsync(
+            AlertOptions options,
+            CancellationToken cancellationToken = default)
+        {
+            return NativePromptRuntime.ShowAlertAsync(
+                NativePromptOptions.Normalize(options),
+                cancellationToken);
+        }
+
+        /// <summary>
         /// Shows a native bottom sheet.
         /// </summary>
         /// <param name="options">The bottom sheet content and actions.</param>
@@ -118,6 +136,24 @@ namespace NativePrompt
         }
 
         /// <summary>
+        /// Shows a native bottom sheet and returns an awaitable that completes after selection
+        /// or cancellation.
+        /// </summary>
+        /// <param name="options">The bottom sheet content and actions.</param>
+        /// <param name="cancellationToken">
+        /// A token that silently dismisses the bottom sheet and cancels the awaitable.
+        /// </param>
+        /// <returns>An awaitable that produces the bottom sheet result.</returns>
+        public static Awaitable<BottomSheetResult> ShowBottomSheetAsync(
+            BottomSheetOptions options,
+            CancellationToken cancellationToken = default)
+        {
+            return NativePromptRuntime.ShowBottomSheetAsync(
+                NativePromptOptions.Normalize(options),
+                cancellationToken);
+        }
+
+        /// <summary>
         /// Shows a native toast.
         /// </summary>
         /// <param name="options">The toast content and behavior.</param>
@@ -130,6 +166,23 @@ namespace NativePrompt
             return NativePromptRuntime.ShowToast(
                 NativePromptOptions.Normalize(options),
                 onDismissed);
+        }
+
+        /// <summary>
+        /// Shows a native toast and returns an awaitable that completes after dismissal.
+        /// </summary>
+        /// <param name="options">The toast content and behavior.</param>
+        /// <param name="cancellationToken">
+        /// A token that silently dismisses the toast and cancels the awaitable.
+        /// </param>
+        /// <returns>An awaitable that produces the toast dismissal reason.</returns>
+        public static Awaitable<ToastDismissReason> ShowToastAsync(
+            ToastOptions options,
+            CancellationToken cancellationToken = default)
+        {
+            return NativePromptRuntime.ShowToastAsync(
+                NativePromptOptions.Normalize(options),
+                cancellationToken);
         }
 
         /// <summary>

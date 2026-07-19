@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace NativePrompt
@@ -82,6 +83,36 @@ namespace NativePrompt
                 lifetime);
         }
 
+        internal Awaitable<AlertResult> ShowAlertAsync(
+            AlertOptions options,
+            CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return CreateCanceledAwaitable<AlertResult>();
+            }
+
+            var request = new AlertRequest(this, NextRequestId("alert"), options);
+            bool startImmediately;
+            lock (_gate)
+            {
+                _alertQueue.Enqueue(request);
+                startImmediately = _activeAlert == null;
+                if (startImmediately)
+                {
+                    _activeAlert = _alertQueue.Dequeue();
+                }
+            }
+
+            request.RegisterCancellation(cancellationToken);
+            if (startImmediately && !request.Cancelled)
+            {
+                StartAlert(request);
+            }
+
+            return request.Awaitable;
+        }
+
         internal BottomSheetHandle ShowBottomSheet(
             BottomSheetOptions options,
             Action<BottomSheetResult> onCompleted)
@@ -119,6 +150,46 @@ namespace NativePrompt
                 request.Tag,
                 request.GroupId,
                 lifetime);
+        }
+
+        internal Awaitable<BottomSheetResult> ShowBottomSheetAsync(
+            BottomSheetOptions options,
+            CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return CreateCanceledAwaitable<BottomSheetResult>();
+            }
+
+            var request = new BottomSheetRequest(
+                this,
+                NextRequestId("bottom-sheet"),
+                options);
+            lock (_gate)
+            {
+                _bottomSheets.Add(request.RequestId, request);
+            }
+
+            request.RegisterCancellation(cancellationToken);
+            if (!request.Cancelled)
+            {
+                try
+                {
+                    request.PlatformStarted = true;
+                    _strategy.ShowBottomSheet(request.RequestId, options);
+                }
+                catch (Exception exception)
+                {
+                    lock (_gate)
+                    {
+                        request.Cancelled = true;
+                        _bottomSheets.Remove(request.RequestId);
+                    }
+                    FailRequestCompletion(request, exception);
+                }
+            }
+
+            return request.Awaitable;
         }
 
         internal ToastHandle ShowToast(
@@ -176,6 +247,64 @@ namespace NativePrompt
                 request.Tag,
                 request.GroupId,
                 lifetime);
+        }
+
+        internal Awaitable<ToastDismissReason> ShowToastAsync(
+            ToastOptions options,
+            CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return CreateCanceledAwaitable<ToastDismissReason>();
+            }
+
+            var request = new ToastRequest(this, NextRequestId("toast"), options);
+            ToastRequest replaced;
+            lock (_gate)
+            {
+                replaced = _activeToast;
+                if (replaced != null)
+                {
+                    ClaimForDelivery(replaced);
+                }
+                _activeToast = request;
+            }
+
+            if (replaced != null)
+            {
+                try
+                {
+                    _strategy.DismissToast(replaced.RequestId);
+                }
+                finally
+                {
+                    PostToastCompletion(replaced, ToastDismissReason.Replaced);
+                }
+            }
+
+            request.RegisterCancellation(cancellationToken);
+            if (!request.Cancelled)
+            {
+                try
+                {
+                    request.PlatformStarted = true;
+                    _strategy.ShowToast(request.RequestId, request.Options);
+                }
+                catch (Exception exception)
+                {
+                    lock (_gate)
+                    {
+                        request.Cancelled = true;
+                        if (ReferenceEquals(_activeToast, request))
+                        {
+                            _activeToast = null;
+                        }
+                    }
+                    FailRequestCompletion(request, exception);
+                }
+            }
+
+            return request.Awaitable;
         }
 
         internal LoadingHandle ShowLoading(LoadingOptions options)
@@ -380,7 +509,7 @@ namespace NativePrompt
 
             foreach (PromptRequest request in requests)
             {
-                ReleaseRequest(request);
+                CancelRequestCompletion(request, fromCancellationToken: false);
             }
             for (int i = 0; i < loadingRequests.Count; i++)
             {
@@ -395,11 +524,20 @@ namespace NativePrompt
 
         private void StartAlert(AlertRequest request)
         {
+            lock (_gate)
+            {
+                if (request.Cancelled || !ReferenceEquals(_activeAlert, request))
+                {
+                    return;
+                }
+                request.PlatformStarted = true;
+            }
+
             try
             {
                 _strategy.ShowAlert(request.RequestId, request.Options);
             }
-            catch
+            catch (Exception exception)
             {
                 AlertRequest next;
                 lock (_gate)
@@ -407,12 +545,104 @@ namespace NativePrompt
                     request.Cancelled = true;
                     next = MoveToNextAlert(request);
                 }
+                if (request.IsAsync)
+                {
+                    FailRequestCompletion(request, exception);
+                    if (next != null)
+                    {
+                        TryPlatformAction(() => StartAlert(next));
+                    }
+                    return;
+                }
+
                 ReleaseRequest(request);
                 if (next != null)
                 {
                     StartAlert(next);
                 }
                 throw;
+            }
+        }
+
+        private void CancelAsyncRequest(PromptRequest request)
+        {
+            bool found;
+            bool dismissPlatform = false;
+            AlertRequest nextAlert = null;
+            lock (_gate)
+            {
+                if (!request.IsAsync || request.Cancelled)
+                {
+                    return;
+                }
+
+                found = _pendingDeliveries.Remove(request);
+                if (request is AlertRequest alert)
+                {
+                    if (ReferenceEquals(_activeAlert, alert))
+                    {
+                        found = true;
+                        dismissPlatform = alert.PlatformStarted && !alert.Completed;
+                        nextAlert = MoveToNextAlert(alert);
+                    }
+                    else if (RemoveQueuedAlert(alert))
+                    {
+                        found = true;
+                    }
+                }
+                else if (request is BottomSheetRequest bottomSheet)
+                {
+                    bool registered = _bottomSheets.TryGetValue(
+                        bottomSheet.RequestId,
+                        out BottomSheetRequest current) &&
+                        ReferenceEquals(current, bottomSheet);
+                    found |= registered;
+                    if (registered)
+                    {
+                        _bottomSheets.Remove(bottomSheet.RequestId);
+                        dismissPlatform = bottomSheet.PlatformStarted && !bottomSheet.Completed;
+                    }
+                }
+                else if (request is ToastRequest toast)
+                {
+                    bool active = ReferenceEquals(_activeToast, toast);
+                    found |= active;
+                    if (active)
+                    {
+                        _activeToast = null;
+                        dismissPlatform = toast.PlatformStarted && !toast.Completed;
+                    }
+                }
+
+                if (!found)
+                {
+                    return;
+                }
+                request.Cancelled = true;
+            }
+
+            CancelRequestCompletion(
+                request,
+                fromCancellationToken: true,
+                dispatch: false);
+            if (dismissPlatform)
+            {
+                if (request is AlertRequest)
+                {
+                    TryPlatformAction(() => _strategy.DismissAlert(request.RequestId));
+                }
+                else if (request is BottomSheetRequest)
+                {
+                    TryPlatformAction(() => _strategy.DismissBottomSheet(request.RequestId));
+                }
+                else
+                {
+                    TryPlatformAction(() => _strategy.DismissToast(request.RequestId));
+                }
+            }
+            if (nextAlert != null)
+            {
+                TryPlatformAction(() => StartAlert(nextAlert));
             }
         }
 
@@ -717,6 +947,7 @@ namespace NativePrompt
             PostDelivery(request, () =>
             {
                 SafeInvoke(request.Callback, result);
+                request.TrySetAsyncResult(result);
                 NP.RaiseAlertCompleted(new AlertCompletedEventArgs(
                     request.RequestId, request.Tag, request.GroupId, result));
             }, () =>
@@ -740,6 +971,7 @@ namespace NativePrompt
             PostDelivery(request, () =>
             {
                 SafeInvoke(request.Callback, result);
+                request.TrySetAsyncResult(result);
                 NP.RaiseBottomSheetCompleted(new BottomSheetCompletedEventArgs(
                     request.RequestId, request.Tag, request.GroupId, result));
             });
@@ -750,6 +982,7 @@ namespace NativePrompt
             PostDelivery(request, () =>
             {
                 SafeInvoke(request.Callback, reason);
+                request.TrySetAsyncResult(reason);
                 NP.RaiseToastDismissed(new ToastDismissedEventArgs(
                     request.RequestId, request.Tag, request.GroupId, reason));
             });
@@ -782,7 +1015,7 @@ namespace NativePrompt
                     }
                 }
 
-                if (!request.TryCompleteLifetime())
+                if (!request.TryBeginDelivery())
                 {
                     request.ReleaseContent();
                     return;
@@ -877,17 +1110,81 @@ namespace NativePrompt
 
         private static void ReleaseRequest(PromptRequest request)
         {
-            request.TryCompleteLifetime();
+            request.AbandonCompletion();
             request.ReleaseContent();
+        }
+
+        private void CancelRequestCompletion(
+            PromptRequest request,
+            bool fromCancellationToken,
+            bool dispatch = true)
+        {
+            if (!request.IsAsync)
+            {
+                ReleaseRequest(request);
+                return;
+            }
+
+            request.ReleaseContent();
+            if (dispatch)
+            {
+                _dispatcher.Post(() => request.TrySetAsyncCanceled(fromCancellationToken));
+            }
+            else
+            {
+                request.TrySetAsyncCanceled(fromCancellationToken);
+            }
+        }
+
+        private void PostAsyncCancellation(PromptRequest request)
+        {
+            _dispatcher.Post(() => CancelAsyncRequest(request));
+        }
+
+        private void FailRequestCompletion(PromptRequest request, Exception exception)
+        {
+            if (!request.IsAsync)
+            {
+                ReleaseRequest(request);
+                return;
+            }
+
+            request.ReleaseContent();
+            _dispatcher.Post(() => request.TrySetAsyncException(
+                exception ?? new InvalidOperationException(
+                    "The native prompt failed to start.")));
+        }
+
+        private Awaitable<T> CreateCanceledAwaitable<T>()
+        {
+            var completionSource = new AwaitableCompletionSource<T>();
+            Awaitable<T> awaitable = completionSource.Awaitable;
+            _dispatcher.Post(() => completionSource.TrySetCanceled());
+            return awaitable;
         }
 
         private abstract class PromptRequest
         {
+            private NativePromptCoordinator _owner;
+            private CancellationTokenRegistration _registration;
+            private int _hasRegistration;
+            private int _asyncCompletionState;
+
             protected PromptRequest(string requestId, string tag, string groupId)
             {
                 RequestId = requestId;
                 Tag = tag;
                 GroupId = groupId;
+            }
+
+            protected PromptRequest(
+                NativePromptCoordinator owner,
+                string requestId,
+                string tag,
+                string groupId)
+                : this(requestId, tag, groupId)
+            {
+                _owner = owner ?? throw new ArgumentNullException(nameof(owner));
             }
 
             internal string RequestId { get; }
@@ -896,7 +1193,40 @@ namespace NativePrompt
             internal bool Opened { get; set; }
             internal bool Completed { get; set; }
             internal bool Cancelled { get; set; }
+            internal bool PlatformStarted { get; set; }
             internal PromptHandleLifetime Lifetime { get; set; }
+            internal bool IsAsync => _owner != null;
+
+            internal void RegisterCancellation(CancellationToken cancellationToken)
+            {
+                if (!cancellationToken.CanBeCanceled)
+                {
+                    return;
+                }
+
+                CancellationTokenRegistration registration = cancellationToken.Register(
+                    AsyncCancellationCallback.Callback,
+                    this,
+                    useSynchronizationContext: false);
+                if (Volatile.Read(ref _asyncCompletionState) != 0)
+                {
+                    registration.Dispose();
+                    return;
+                }
+
+                _registration = registration;
+                Volatile.Write(ref _hasRegistration, 1);
+                if (Volatile.Read(ref _asyncCompletionState) != 0 &&
+                    Interlocked.Exchange(ref _hasRegistration, 0) != 0)
+                {
+                    registration.Dispose();
+                }
+            }
+
+            internal bool TryBeginDelivery()
+            {
+                return IsAsync || TryCompleteLifetime();
+            }
 
             internal bool TryCompleteLifetime()
             {
@@ -905,7 +1235,71 @@ namespace NativePrompt
                 return lifetime != null && lifetime.TryComplete();
             }
 
+            internal void AbandonCompletion()
+            {
+                if (!IsAsync)
+                {
+                    TryCompleteLifetime();
+                    return;
+                }
+
+                TryPrepareAsyncCompletion(disposeRegistration: true);
+            }
+
+            internal void TrySetAsyncCanceled(bool fromCancellationToken)
+            {
+                if (TryPrepareAsyncCompletion(
+                    disposeRegistration: !fromCancellationToken))
+                {
+                    TrySetAsyncCanceledCore();
+                }
+            }
+
+            internal void TrySetAsyncException(Exception exception)
+            {
+                if (TryPrepareAsyncCompletion(disposeRegistration: true))
+                {
+                    TrySetAsyncExceptionCore(exception);
+                }
+            }
+
+            protected bool TryPrepareAsyncResult()
+            {
+                return TryPrepareAsyncCompletion(disposeRegistration: true);
+            }
+
+            protected abstract void TrySetAsyncCanceledCore();
+            protected abstract void TrySetAsyncExceptionCore(Exception exception);
+
             internal abstract void ReleaseContent();
+
+            private void CancelFromToken()
+            {
+                _owner?.PostAsyncCancellation(this);
+            }
+
+            private bool TryPrepareAsyncCompletion(bool disposeRegistration)
+            {
+                if (Interlocked.Exchange(ref _asyncCompletionState, 1) != 0)
+                {
+                    return false;
+                }
+
+                _owner = null;
+                if (Interlocked.Exchange(ref _hasRegistration, 0) != 0 &&
+                    disposeRegistration)
+                {
+                    _registration.Dispose();
+                }
+                _registration = default;
+                return true;
+            }
+
+            private static class AsyncCancellationCallback
+            {
+                internal static readonly Action<object> Callback =
+                    state => ((PromptRequest)state).CancelFromToken();
+            }
         }
 
         private sealed class AlertRequest : PromptRequest
@@ -920,10 +1314,40 @@ namespace NativePrompt
                 Callback = callback;
             }
 
+            internal AlertRequest(
+                NativePromptCoordinator owner,
+                string requestId,
+                AlertOptions options)
+                : base(owner, requestId, options.Tag, options.GroupId)
+            {
+                Options = options;
+                CompletionSource = new AwaitableCompletionSource<AlertResult>();
+            }
+
             internal AlertOptions Options { get; private set; }
             internal Action<AlertResult> Callback { get; private set; }
+            internal AwaitableCompletionSource<AlertResult> CompletionSource { get; }
+            internal Awaitable<AlertResult> Awaitable => CompletionSource.Awaitable;
             internal bool PlatformDismissRequested { get; set; }
             internal bool PlatformDismissCompleted { get; set; }
+
+            internal void TrySetAsyncResult(AlertResult result)
+            {
+                if (CompletionSource != null && TryPrepareAsyncResult())
+                {
+                    CompletionSource.TrySetResult(result);
+                }
+            }
+
+            protected override void TrySetAsyncCanceledCore()
+            {
+                CompletionSource.TrySetCanceled();
+            }
+
+            protected override void TrySetAsyncExceptionCore(Exception exception)
+            {
+                CompletionSource.TrySetException(exception);
+            }
 
             internal override void ReleaseContent()
             {
@@ -943,7 +1367,36 @@ namespace NativePrompt
                 Callback = callback;
             }
 
+            internal BottomSheetRequest(
+                NativePromptCoordinator owner,
+                string requestId,
+                BottomSheetOptions options)
+                : base(owner, requestId, options.Tag, options.GroupId)
+            {
+                CompletionSource = new AwaitableCompletionSource<BottomSheetResult>();
+            }
+
             internal Action<BottomSheetResult> Callback { get; private set; }
+            internal AwaitableCompletionSource<BottomSheetResult> CompletionSource { get; }
+            internal Awaitable<BottomSheetResult> Awaitable => CompletionSource.Awaitable;
+
+            internal void TrySetAsyncResult(BottomSheetResult result)
+            {
+                if (CompletionSource != null && TryPrepareAsyncResult())
+                {
+                    CompletionSource.TrySetResult(result);
+                }
+            }
+
+            protected override void TrySetAsyncCanceledCore()
+            {
+                CompletionSource.TrySetCanceled();
+            }
+
+            protected override void TrySetAsyncExceptionCore(Exception exception)
+            {
+                CompletionSource.TrySetException(exception);
+            }
 
             internal override void ReleaseContent()
             {
@@ -963,8 +1416,38 @@ namespace NativePrompt
                 Callback = callback;
             }
 
+            internal ToastRequest(
+                NativePromptCoordinator owner,
+                string requestId,
+                ToastOptions options)
+                : base(owner, requestId, options.Tag, options.GroupId)
+            {
+                Options = options;
+                CompletionSource = new AwaitableCompletionSource<ToastDismissReason>();
+            }
+
             internal ToastOptions Options { get; private set; }
             internal Action<ToastDismissReason> Callback { get; private set; }
+            internal AwaitableCompletionSource<ToastDismissReason> CompletionSource { get; }
+            internal Awaitable<ToastDismissReason> Awaitable => CompletionSource.Awaitable;
+
+            internal void TrySetAsyncResult(ToastDismissReason result)
+            {
+                if (CompletionSource != null && TryPrepareAsyncResult())
+                {
+                    CompletionSource.TrySetResult(result);
+                }
+            }
+
+            protected override void TrySetAsyncCanceledCore()
+            {
+                CompletionSource.TrySetCanceled();
+            }
+
+            protected override void TrySetAsyncExceptionCore(Exception exception)
+            {
+                CompletionSource.TrySetException(exception);
+            }
 
             internal override void ReleaseContent()
             {
@@ -982,6 +1465,16 @@ namespace NativePrompt
             }
 
             internal LoadingOptions Options { get; private set; }
+
+            protected override void TrySetAsyncCanceledCore()
+            {
+                throw new InvalidOperationException("Loading requests do not support awaitables.");
+            }
+
+            protected override void TrySetAsyncExceptionCore(Exception exception)
+            {
+                throw new InvalidOperationException("Loading requests do not support awaitables.");
+            }
 
             internal override void ReleaseContent()
             {
