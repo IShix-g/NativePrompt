@@ -11,6 +11,9 @@ namespace NativePrompt
         private const string NativeToastClassName = "com.ishix.nativeprompt.NativeToast";
         private const string NativeAlertClassName = "com.ishix.nativeprompt.NativeAlert";
         private const string NativeLoadingClassName = "com.ishix.nativeprompt.NativeLoading";
+        private const string NativeReviewClassName =
+            "com.ishix.nativeprompt.review.NativeReview";
+        private const string UnityPlayerClassName = "com.unity3d.player.UnityPlayer";
         private static readonly AndroidJavaClass NativeBottomSheetClass =
             new AndroidJavaClass(NativeBottomSheetClassName);
         private static readonly AndroidJavaClass NativeToastClass =
@@ -19,6 +22,10 @@ namespace NativePrompt
             new AndroidJavaClass(NativeAlertClassName);
         private static readonly AndroidJavaClass NativeLoadingClass =
             new AndroidJavaClass(NativeLoadingClassName);
+        private static readonly AndroidJavaClass NativeReviewClass =
+            new AndroidJavaClass(NativeReviewClassName);
+        private static readonly AndroidJavaClass UnityPlayerClass =
+            new AndroidJavaClass(UnityPlayerClassName);
         private readonly object _gate = new object();
         private readonly Dictionary<string, BottomSheetCallbackProxy> _bottomSheetCallbacks =
             new Dictionary<string, BottomSheetCallbackProxy>(StringComparer.Ordinal);
@@ -163,6 +170,31 @@ namespace NativePrompt
         public void DismissLoading(string requestId)
         {
             NativeLoadingClass.CallStatic("dismiss", requestId);
+        }
+
+        public void RequestReview()
+        {
+            try
+            {
+                using (AndroidJavaObject activity =
+                       UnityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity"))
+                {
+                    if (activity == null)
+                    {
+                        Debug.LogWarning(
+                            "NativePrompt Store Review request ignored because the Unity " +
+                            "Activity is unavailable.");
+                        return;
+                    }
+
+                    NativeReviewClass.CallStatic("request", activity);
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning(
+                    $"NativePrompt Store Review request could not be started: {exception.Message}");
+            }
         }
 
         public void Reset()

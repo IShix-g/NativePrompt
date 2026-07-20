@@ -54,6 +54,9 @@ namespace NativePrompt.Samples.Tests
             Assert.That(
                 controller.GetBoundApi("loading-dismiss-button"),
                 Is.EqualTo("LoadingHandle.Dismiss"));
+            Assert.That(
+                controller.GetBoundApi("review-request-button"),
+                Is.EqualTo("NP.RequestReview"));
             Assert.That(root.Q<Button>("loading-background-button"), Is.Null);
             Assert.That(root.Q<Button>("loading-block-button"), Is.Null);
             Assert.That(root.Q<Button>("loading-position-top-right-button"), Is.Null);
@@ -127,6 +130,7 @@ namespace NativePrompt.Samples.Tests
             Button alertNo = root.Q<Button>("alert-no-button");
             Button alertFull = root.Q<Button>("alert-full-button");
             Button sheetStandard = root.Q<Button>("sheet-standard-button");
+            Button sheetDestructive = root.Q<Button>("sheet-destructive-button");
             Button sheetDisabled = root.Q<Button>("sheet-disabled-button");
             Button toastAuto = root.Q<Button>("toast-auto-button");
             Button toastManual = root.Q<Button>("toast-manual-button");
@@ -140,11 +144,20 @@ namespace NativePrompt.Samples.Tests
             Button loadingMessage = root.Q<Button>("loading-message-button");
             Button loadingBlockBackground = root.Q<Button>("loading-block-background-button");
             Button loadingDismiss = root.Q<Button>("loading-dismiss-button");
+            Button reviewRequest = root.Q<Button>("review-request-button");
             VisualElement resultPanel = root.Q<VisualElement>("result-panel");
 
             Assert.That(alertContent.worldBound.y, Is.EqualTo(alertYes.worldBound.y).Within(0.5f));
             Assert.That(alertNo.worldBound.y, Is.EqualTo(alertFull.worldBound.y).Within(0.5f));
             Assert.That(alertFull.worldBound.yMax, Is.LessThan(sheetStandard.worldBound.yMin));
+            Assert.That(
+                sheetStandard.worldBound.y,
+                Is.EqualTo(sheetDestructive.worldBound.y).Within(0.5f));
+            Assert.That(
+                sheetStandard.worldBound.y,
+                Is.EqualTo(sheetDisabled.worldBound.y).Within(0.5f));
+            Assert.That(sheetStandard.worldBound.xMax, Is.LessThan(sheetDestructive.worldBound.xMin));
+            Assert.That(sheetDestructive.worldBound.xMax, Is.LessThan(sheetDisabled.worldBound.xMin));
             Assert.That(sheetDisabled.worldBound.yMax, Is.LessThan(toastAuto.worldBound.yMin));
             Assert.That(toastManual.worldBound.y, Is.EqualTo(toastDismiss.worldBound.y).Within(0.5f));
             Assert.That(toastDismiss.worldBound.yMax, Is.LessThan(loadingSizeSmall.worldBound.yMin));
@@ -171,7 +184,9 @@ namespace NativePrompt.Samples.Tests
                 Is.EqualTo(loadingDismiss.worldBound.y).Within(0.5f));
             Assert.That(loadingMessage.text, Is.EqualTo("With message"));
             Assert.That(loadingBlockBackground.text, Is.EqualTo("BG + block (5s)"));
-            Assert.That(loadingDismiss.worldBound.yMax, Is.LessThan(resultPanel.worldBound.yMin));
+            Assert.That(loadingDismiss.worldBound.yMax, Is.LessThan(reviewRequest.worldBound.yMin));
+            Assert.That(reviewRequest.text, Is.EqualTo("Request review (test)"));
+            Assert.That(reviewRequest.worldBound.yMax, Is.LessThan(resultPanel.worldBound.yMin));
         }
 
         [UnityTest]

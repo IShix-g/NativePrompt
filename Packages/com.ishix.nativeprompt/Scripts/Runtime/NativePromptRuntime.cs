@@ -54,6 +54,11 @@ namespace NativePrompt
             return GetCoordinator().ShowLoading(options);
         }
 
+        internal static void RequestReview()
+        {
+            GetCoordinator().RequestReview();
+        }
+
         internal static void ReceiveAlert(string requestId, AlertResult result)
         {
             GetCurrentCoordinator()?.ReceiveAlert(requestId, result);

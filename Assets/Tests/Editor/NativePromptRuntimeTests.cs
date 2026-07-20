@@ -118,6 +118,14 @@ namespace NativePrompt.Tests
         }
 
         [Test]
+        public void Facade_RequestReviewInvokesStrategy()
+        {
+            NP.RequestReview();
+
+            Assert.That(_strategy.RequestReviewCount, Is.EqualTo(1));
+        }
+
+        [Test]
         public void Facade_ValidatesArgumentsSynchronously()
         {
             Assert.Throws<ArgumentNullException>(() => NP.ShowAlert(null));
@@ -558,6 +566,21 @@ namespace NativePrompt.Tests
             }
 
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void EditorRequestReview_LogsWithoutLeavingPendingWork()
+        {
+            NativePromptRuntime.SetForTesting(new EditorNativePromptStrategy(), _dispatcher);
+            LogAssert.Expect(
+                LogType.Log,
+                "NativePrompt Store Review: request accepted in the Unity Editor; " +
+                "no store review UI is shown.");
+
+            NP.RequestReview();
+
+            Assert.That(NativePromptRuntime.PendingCallbackCountForTesting, Is.Zero);
+            Assert.That(NativePromptRuntime.ActiveLoadingCountForTesting, Is.Zero);
         }
 
         [Test]
@@ -1872,6 +1895,8 @@ namespace NativePrompt.Tests
 
             internal int ResetCount { get; private set; }
 
+            internal int RequestReviewCount { get; private set; }
+
             internal Exception DismissAlertException { get; set; }
 
             internal Action OnDismissAlert { get; set; }
@@ -1941,6 +1966,11 @@ namespace NativePrompt.Tests
             public void DismissLoading(string requestId)
             {
                 DismissedLoadingIds.Add(requestId);
+            }
+
+            public void RequestReview()
+            {
+                RequestReviewCount++;
             }
 
             public void Reset()

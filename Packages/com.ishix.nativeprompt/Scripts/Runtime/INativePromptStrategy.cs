@@ -18,6 +18,8 @@ namespace NativePrompt
 
         void DismissLoading(string requestId);
 
+        void RequestReview();
+
         void Reset();
     }
 }

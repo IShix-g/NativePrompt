@@ -6,6 +6,11 @@ All notable changes to this package are documented in this file.
 
 ### Added
 
+- `NP.RequestReview()` for iOS, Android, and the Unity Editor, using StoreKit on
+  iOS and Google Play In-App Review `2.0.2` on Android without application-side
+  manifest or Gradle-template setup.
+- A Store Review test control in the synchronized UI Toolkit samples, plus
+  EditMode facade wiring and PlayMode sample layout/wiring coverage.
 - Optional Unity Awaitable APIs for Alert, Bottom Sheet, and Toast, including
   cancellation and Runtime Reset behavior, folded README examples, API reference,
   and a sequential-use recipe.

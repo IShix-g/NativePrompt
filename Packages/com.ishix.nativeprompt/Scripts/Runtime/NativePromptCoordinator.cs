@@ -359,6 +359,11 @@ namespace NativePrompt
                 lifetime);
         }
 
+        internal void RequestReview()
+        {
+            _strategy.RequestReview();
+        }
+
         internal void ReceiveAlertOpened(string requestId)
         {
             AlertRequest request;
