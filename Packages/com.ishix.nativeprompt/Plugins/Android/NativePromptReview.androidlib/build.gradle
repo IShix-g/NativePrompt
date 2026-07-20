@@ -1,0 +1,10 @@
+apply plugin: 'com.android.library'
+
+dependencies {
+    implementation 'com.google.android.play:review:2.0.2'
+}
+
+android {
+    namespace 'com.ishix.nativeprompt.review'
+    compileSdk getProperty("unity.compileSdkVersion") as int
+}

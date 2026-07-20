@@ -3,7 +3,8 @@
 # Native Prompt
 
 Native Prompt is a native UI plugin for Unity. It provides alerts, bottom sheets,
-toasts, and loading overlays on iOS and Android through one small C# API.
+toasts, loading overlays, and in-app review requests on iOS and Android through one
+small C# API.
 
 ![Native Prompt Top](docs/images/native-prompt-top.jpg)
 
@@ -17,6 +18,7 @@ toasts, and loading overlays on iOS and Android through one small C# API.
 - [Native Bottom Sheet](#native-bottom-sheet)
 - [Native Toast](#native-toast)
 - [Native Loading](#native-loading)
+- [Store Review](#store-review)
 - [Handles](#handles)
 - [Lifecycle Events](#lifecycle-events)
 - [Sample Scene](#sample-scene)
@@ -29,8 +31,10 @@ toasts, and loading overlays on iOS and Android through one small C# API.
 - iOS 13 or later
 - Android API level 24 or later
 
-The Android implementation uses Android SDK dialogs and views. It does not require
-Material Components, Compose, or another external UI library.
+The Android prompt UI uses Android SDK dialogs and views. It does not require
+Material Components, Compose, or another external UI library. Store Review uses
+Google Play In-App Review `com.google.android.play:review:2.0.2`, resolved by the
+package's Android Library.
 
 ## Installation
 
@@ -77,7 +81,8 @@ For common application flows, see [Recipes](docs/recipes.md).
 ## Unity Editor Preview
 
 Alert, Bottom Sheet, Toast, and Loading have interactive, iOS-inspired previews in
-the Game view while running in the Unity Editor. Preview assets are Editor-only and
+the Game view while running in the Unity Editor. Store Review accepts the request
+and writes a test log without showing store UI. Preview assets are Editor-only and
 loaded through `AssetDatabase`, so they are not included in player builds.
 
 ## [Native Alert](docs/api.md#native-alert)
@@ -303,6 +308,39 @@ center.
 See the [Loading API reference](docs/api.md#native-loading) for appearance options,
 delayed display, overlapping requests, and lifecycle events.
 
+## [Store Review](docs/api.md#store-review)
+
+![Native Store Review](docs/images/native-store-review.jpg)
+
+Request the platform's in-app rating and review flow after a meaningful, positive
+moment in your application:
+
+```csharp
+NP.RequestReview();
+```
+
+The method has no arguments, result, callback, or handle. Native Prompt never calls
+it automatically and does not manage session counts, elapsed days, app versions,
+timing, or frequency. The operating system or store may suppress the dialog, so do
+not use its display, rating, or submission as part of application control flow.
+
+On iOS, verify the UI with a development build; Store Review requests have no
+effect in TestFlight. The review dialog is system-provided: iOS automatically
+localizes its standard explanatory text and controls for the device language, and
+applications cannot customize that wording. The app name shown in the dialog comes
+from the bundle display name. No additional localization is needed when the same app
+name is used in every language; applications that need a language-specific app name
+can localize `CFBundleDisplayName` in their generated iOS project.
+
+On Android, use a Play Console internal test track or internal app sharing. The
+package resolves `com.google.android.play:review:2.0.2` internally; the application
+does not need an Android Manifest change, custom Gradle template, App Store ID,
+entitlement, capability, or privacy manifest change.
+
+The sample's `Request review (test)` button is for Editor and device verification.
+Production apps should choose an appropriate moment automatically rather than make
+the system review request a user-facing call-to-action.
+
 ## [Handles](docs/api.md#handle-lifetime)
 
 Every `Show*()` method returns a handle for that request.
@@ -397,9 +435,10 @@ arguments, metadata, delivery order, Loading counts, and end reasons.
 
 ## Sample Scene
 
-The imported sample includes Alert, Bottom Sheet, Toast, and Loading controls and
-displays their latest results. Loading controls cover spinner sizes, representative
-positions, a message, background/input blocking, and manual dismissal. Follow
+The imported sample includes Alert, Bottom Sheet, Toast, Loading, and Store Review
+test controls and displays their latest results. Loading controls cover spinner
+sizes, representative positions, a message, background/input blocking, and manual
+dismissal. The Store Review result reports only that the request was called. Follow
 [Quick Start](#quick-start) to import and open it.
 
 ## Documentation

@@ -36,7 +36,8 @@ namespace NativePrompt.Samples
             "loading-position-bottom-right-button",
             "loading-message-button",
             "loading-block-background-button",
-            "loading-dismiss-button"
+            "loading-dismiss-button",
+            "review-request-button"
         };
 
         private readonly Dictionary<string, string> _boundApis = new Dictionary<string, string>();
@@ -160,6 +161,7 @@ namespace NativePrompt.Samples
                 "NP.ShowLoading",
                 ShowBlockingBackgroundLoading);
             Bind("loading-dismiss-button", "LoadingHandle.Dismiss", DismissLoading);
+            Bind("review-request-button", "NP.RequestReview", RequestReview);
             UpdateLoadingOptionSelection();
         }
 
@@ -462,6 +464,12 @@ namespace NativePrompt.Samples
             LoadingHandle loading = _loading;
             _loading = null;
             loading.Dismiss();
+        }
+
+        private void RequestReview()
+        {
+            SetResult("Store Review: request called (display not guaranteed)");
+            NP.RequestReview();
         }
 
         private IEnumerator DismissLoadingAfterDelay(LoadingHandle loading)

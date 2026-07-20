@@ -1,8 +1,8 @@
 # NativePrompt API reference
 
-NativePrompt provides native alerts, bottom sheets, toasts, and loading overlays for
-iOS and Android. The same API also works in the Unity Editor for development and
-testing.
+NativePrompt provides native alerts, bottom sheets, toasts, loading overlays, and
+in-app review requests for iOS and Android. The same API also works in the Unity
+Editor for development and testing.
 
 All public types are in the `NativePrompt` namespace and the `NativePrompt`
 assembly.
@@ -26,6 +26,7 @@ For application-flow examples, see [Recipes](recipes.md).
 | Native Bottom Sheet | `NP.ShowBottomSheet(...)` | `NP.ShowBottomSheetAsync(...)` | `Action<BottomSheetResult>` | `BottomSheetHandle` | `BottomSheetOpened`, `BottomSheetCompleted` |
 | Native Toast | `NP.ShowToast(...)` | `NP.ShowToastAsync(...)` | `Action<ToastDismissReason>` | `ToastHandle` | `ToastShown`, `ToastDismissed` |
 | Native Loading | `NP.ShowLoading(...)` | None | None | `LoadingHandle` | `LoadingStarted`, `LoadingEnded`, `LoadingStateChanged` |
+| Store Review | `NP.RequestReview()` | None | None | None | None |
 
 Use the callback passed to `Show*()` when only the caller needs the result. Use a
 static lifecycle event when another part of the application needs to observe all
@@ -595,6 +596,57 @@ settings.
 | `Cancelled` | The owner bound through `AddTo(...)` was destroyed |
 | `Reset` | The NativePrompt runtime was reset |
 
+## Store Review
+
+```csharp
+void RequestReview()
+```
+
+Requests the operating system or store's in-app review flow and returns immediately.
+It has no arguments, result, callback, handle, or lifecycle event.
+
+```csharp
+// Call after the player completes a meaningful, positive interaction.
+NP.RequestReview();
+```
+
+The application owns the call conditions. Native Prompt does not automatically
+request a review or track sessions, usage days, app versions, timing, or frequency.
+Call it at an appropriate point after the user has had enough experience to give
+useful feedback. Do not ask for a favorable rating, and do not make the system
+review request a production button action.
+
+Neither platform guarantees that a dialog appears. Native Prompt does not report
+whether the review UI was displayed, dismissed, rated, or submitted. Never branch
+application logic on an assumed display or outcome.
+
+### iOS verification
+
+iOS uses `UnityEngine.iOS.Device.RequestStoreReview()`. Verify the review UI in a
+development build. The request has no effect in an app distributed through
+TestFlight. StoreKit controls display frequency and may suppress the UI in a
+shipping build.
+
+No App Store ID, `Info.plist` entry, entitlement, capability, privacy manifest, or
+Xcode post-process configuration is required.
+
+### Android verification and dependency
+
+Android uses Google Play In-App Review from
+`com.google.android.play:review:2.0.2`. The package's Android Library declares and
+resolves this dependency; it contains no native `.so`. The application does not
+need to add or edit an Android Manifest or custom Gradle template.
+
+Use a Play Console internal test track or internal app sharing for device
+verification. For an internal test track, use an eligible primary Play account that
+installed the app from the track and has not already reviewed it. Internal app
+sharing is useful for rapid UI verification, but its review submission button is
+disabled. Quotas and Play Store eligibility can still affect display behavior.
+
+Only one Android Review API request is processed at a time. A concurrent request is
+ignored with a diagnostic log. API information or launch failures are logged and do
+not interrupt the application's normal flow.
+
 ## Handle lifetime
 
 `AlertHandle`, `BottomSheetHandle`, `ToastHandle`, and `LoadingHandle` implement
@@ -702,9 +754,11 @@ the Unity main thread.
 | Bottom sheet | UIKit action sheet | SDK `Dialog` and standard views | iOS-inspired Game view action sheet |
 | Toast | UIKit view overlay | Standard-view overlay | iOS-inspired Game view banner |
 | Loading | Existing-window `UIView`, `UIActivityIndicatorView`, optional `UILabel` | Existing-activity `FrameLayout`, indeterminate `ProgressBar`, optional `TextView` | Game view overlay with position, size, delay, and blocking behavior |
+| Store Review | `Device.RequestStoreReview()` | Google Play In-App Review API | No UI; request test log |
 
-Android runtime UI does not require Material Components, Compose, or another
-external UI library. Unsupported platforms throw `PlatformNotSupportedException`;
+Android runtime prompt UI does not require Material Components, Compose, or another
+external UI library. Store Review adds only the Google Play Review SDK dependency
+described above. Unsupported platforms throw `PlatformNotSupportedException`;
 there is no fallback UI.
 
 See [How NativePrompt works](architecture.md) for request flow, lifetime, and

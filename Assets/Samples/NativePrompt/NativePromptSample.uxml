@@ -18,9 +18,9 @@
             <ui:VisualElement class="section">
                 <ui:Label text="BOTTOM SHEET" class="section-title" />
                 <ui:VisualElement class="button-grid">
-                    <ui:Button name="sheet-standard-button" text="Standard" class="action-button" />
-                    <ui:Button name="sheet-destructive-button" text="Destructive" class="action-button destructive-button" />
-                    <ui:Button name="sheet-disabled-button" text="Disabled action" class="action-button" />
+                    <ui:Button name="sheet-standard-button" text="Standard" class="action-button sheet-action-button" />
+                    <ui:Button name="sheet-destructive-button" text="Destructive" class="action-button destructive-button sheet-action-button" />
+                    <ui:Button name="sheet-disabled-button" text="Disabled action" class="action-button sheet-action-button" />
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:VisualElement class="section">
@@ -47,6 +47,12 @@
                     <ui:Button name="loading-message-button" text="With message" class="action-button loading-action-button" />
                     <ui:Button name="loading-block-background-button" text="BG + block (5s)" class="action-button loading-action-button" />
                     <ui:Button name="loading-dismiss-button" text="Dismiss loading" class="action-button secondary-button loading-action-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="section">
+                <ui:Label text="STORE REVIEW" class="section-title" />
+                <ui:VisualElement class="button-grid">
+                    <ui:Button name="review-request-button" text="Request review (test)" class="action-button full-width-button" />
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:VisualElement name="result-panel" class="result-panel" style="border-top-width: 2px; border-right-width: 2px; border-bottom-width: 2px; border-left-width: 2px; border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px;">

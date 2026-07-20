@@ -81,6 +81,15 @@
     background-color: rgb(17, 94, 89);
 }
 
+.sheet-action-button {
+    width: 31%;
+    font-size: 14px;
+}
+
+.full-width-button {
+    width: 100%;
+}
+
 .destructive-button {
     border-color: rgb(153, 40, 61);
     background-color: rgb(190, 54, 80);

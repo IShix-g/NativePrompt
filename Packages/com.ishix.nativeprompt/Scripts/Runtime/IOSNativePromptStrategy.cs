@@ -1,6 +1,7 @@
 #if UNITY_IOS && !UNITY_EDITOR
 using System;
 using System.Runtime.InteropServices;
+using UnityEngine.iOS;
 
 namespace NativePrompt
 {
@@ -103,6 +104,11 @@ namespace NativePrompt
         public void DismissLoading(string requestId)
         {
             NativePrompt_DismissLoading(requestId);
+        }
+
+        public void RequestReview()
+        {
+            Device.RequestStoreReview();
         }
 
         public void Reset()

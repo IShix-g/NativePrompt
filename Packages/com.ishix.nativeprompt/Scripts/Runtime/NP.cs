@@ -196,6 +196,15 @@ namespace NativePrompt
                 NativePromptOptions.Normalize(options));
         }
 
+        /// <summary>
+        /// Requests the platform store's in-app review flow. The operating system or store may
+        /// choose not to display it, and no display or submission result is reported.
+        /// </summary>
+        public static void RequestReview()
+        {
+            NativePromptRuntime.RequestReview();
+        }
+
         internal static void RaiseAlertOpened(AlertOpenedEventArgs args) =>
             RaiseSafely(AlertOpened, args);
 
