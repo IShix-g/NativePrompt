@@ -642,7 +642,28 @@ only for Editor and device verification.
 | Native API | `Device.RequestStoreReview()` | Google Play In-App Review `2.0.2` |
 | Manual project setup | None | None |
 | Recommended UI test | Development Build | Play internal test or internal app sharing |
+| Production display quota (July 2026) | Up to 3 times in 365 days | Time-bound; exact limit not published |
 | Display guarantee | No | No |
+
+### Display quotas
+
+The following limits reflect the platform documentation available in July 2026.
+Follow the linked platform documentation for future changes.
+
+Calling `NP.RequestReview()` does not guarantee that the platform spends one of its
+display opportunities or shows any UI.
+
+- **iOS:** StoreKit limits the system prompt to a maximum of three displays per app
+  for a user within a 365-day period. A user can also disable review prompts
+  entirely. See [Requesting App Store reviews](https://developer.apple.com/documentation/storekit/requesting-app-store-reviews).
+- **Android:** Google Play applies a time-bound quota but does not publish its exact
+  value and may change it without notice. Google notes that repeated requests within
+  a short period, such as less than a month, may not display the dialog. See
+  [Google Play In-App Review quotas](https://developer.android.com/guide/playcore/in-app-review#quotas).
+
+Native Prompt does not add another counter or cooldown on top of these platform
+rules. The application should still choose a small number of meaningful moments and
+can track its own last-requested version or date to avoid unnecessary calls.
 
 ### iOS
 
@@ -670,8 +691,11 @@ only for Editor and device verification.
 - Use a Play Console internal test track or internal app sharing. For an internal
   test track, install the application from the track with an eligible primary Play
   account that has not already reviewed it.
+- Google Play does not enforce the display quota for an application downloaded from
+  an internal test track, although the account and installation eligibility rules
+  still apply.
 - Internal app sharing is useful for confirming the UI, but review submission is
-  disabled. Quotas and Play Store eligibility can still suppress the dialog.
+  disabled.
 
 ## Handle lifetime
 
