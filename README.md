@@ -312,34 +312,19 @@ delayed display, overlapping requests, and lifecycle events.
 
 ![Native Store Review](docs/images/native-store-review.jpg)
 
-Request the platform's in-app rating and review flow after a meaningful, positive
-moment in your application:
+Request the platform-native rating and review flow:
 
 ```csharp
 NP.RequestReview();
 ```
 
-The method has no arguments, result, callback, or handle. Native Prompt never calls
-it automatically and does not manage session counts, elapsed days, app versions,
-timing, or frequency. The operating system or store may suppress the dialog, so do
-not use its display, rating, or submission as part of application control flow.
+Native Prompt only sends the request. The platform may choose not to display the
+dialog, and no display or submission result is returned. No additional project
+configuration is required.
 
-On iOS, verify the UI with a development build; Store Review requests have no
-effect in TestFlight. The review dialog is system-provided: iOS automatically
-localizes its standard explanatory text and controls for the device language, and
-applications cannot customize that wording. The app name shown in the dialog comes
-from the bundle display name. No additional localization is needed when the same app
-name is used in every language; applications that need a language-specific app name
-can localize `CFBundleDisplayName` in their generated iOS project.
-
-On Android, use a Play Console internal test track or internal app sharing. The
-package resolves `com.google.android.play:review:2.0.2` internally; the application
-does not need an Android Manifest change, custom Gradle template, App Store ID,
-entitlement, capability, or privacy manifest change.
-
-The sample's `Request review (test)` button is for Editor and device verification.
-Production apps should choose an appropriate moment automatically rather than make
-the system review request a user-facing call-to-action.
+Call it after a meaningful user interaction. See the
+[Store Review API reference](docs/api.md#store-review) for timing, platform behavior,
+localization, and device testing.
 
 ## [Handles](docs/api.md#handle-lifetime)
 

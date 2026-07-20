@@ -598,54 +598,80 @@ settings.
 
 ## Store Review
 
+Requests the platform-native rating and review flow.
+
 ```csharp
 void RequestReview()
 ```
-
-Requests the operating system or store's in-app review flow and returns immediately.
-It has no arguments, result, callback, handle, or lifecycle event.
 
 ```csharp
 // Call after the player completes a meaningful, positive interaction.
 NP.RequestReview();
 ```
 
-The application owns the call conditions. Native Prompt does not automatically
-request a review or track sessions, usage days, app versions, timing, or frequency.
-Call it at an appropriate point after the user has had enough experience to give
-useful feedback. Do not ask for a favorable rating, and do not make the system
-review request a production button action.
+### Behavior
 
-Neither platform guarantees that a dialog appears. Native Prompt does not report
-whether the review UI was displayed, dismissed, rated, or submitted. Never branch
-application logic on an assumed display or outcome.
+- The method returns immediately and has no arguments, result, callback, handle, or
+  lifecycle event.
+- Native Prompt never calls it automatically. The application decides when and how
+  often to request a review.
+- The platform may suppress the dialog because of quotas, eligibility, or other
+  store rules.
+- Native Prompt cannot report whether the dialog appeared, was dismissed, or led to
+  a rating or review.
+- API or launch failures are logged and do not interrupt normal application flow.
 
-### iOS verification
+Do not branch application logic on the review request or assume that the dialog was
+displayed.
 
-iOS uses `UnityEngine.iOS.Device.RequestStoreReview()`. Verify the review UI in a
-development build. The request has no effect in an app distributed through
-TestFlight. StoreKit controls display frequency and may suppress the UI in a
-shipping build.
+### When to call it
 
-No App Store ID, `Info.plist` entry, entitlement, capability, privacy manifest, or
-Xcode post-process configuration is required.
+Call `NP.RequestReview()` after the user has completed a meaningful interaction and
+has enough experience to evaluate the application. The application can use its own
+session count, usage duration, or version rules to choose that moment.
 
-### Android verification and dependency
+Avoid asking whether the user likes the application before showing the system
+review UI. A production application should also avoid exposing the request itself as
+a button because the platform may silently suppress it. The sample button exists
+only for Editor and device verification.
 
-Android uses Google Play In-App Review from
-`com.google.android.play:review:2.0.2`. The package's Android Library declares and
-resolves this dependency; it contains no native `.so`. The application does not
-need to add or edit an Android Manifest or custom Gradle template.
+### Platform behavior
 
-Use a Play Console internal test track or internal app sharing for device
-verification. For an internal test track, use an eligible primary Play account that
-installed the app from the track and has not already reviewed it. Internal app
-sharing is useful for rapid UI verification, but its review submission button is
-disabled. Quotas and Play Store eligibility can still affect display behavior.
+| | iOS | Android |
+| --- | --- | --- |
+| Native API | `Device.RequestStoreReview()` | Google Play In-App Review `2.0.2` |
+| Manual project setup | None | None |
+| Recommended UI test | Development Build | Play internal test or internal app sharing |
+| Display guarantee | No | No |
 
-Only one Android Review API request is processed at a time. A concurrent request is
-ignored with a diagnostic log. API information or launch failures are logged and do
-not interrupt the application's normal flow.
+### iOS
+
+- No App Store ID, `Info.plist` entry, entitlement, capability, privacy manifest, or
+  Xcode post-process configuration is required.
+- StoreKit controls display frequency and may suppress the dialog.
+- The request has no effect in an application distributed through TestFlight. Use a
+  Development Build when confirming the UI.
+- The system automatically localizes the standard text and controls for the device
+  language. Applications cannot customize that wording.
+- The displayed application name comes from the bundle display name. Localize
+  `CFBundleDisplayName` only when the name itself must vary by language.
+
+### Android
+
+- The package resolves `com.google.android.play:review:2.0.2` from its Android
+  Library. It contains no native `.so`.
+- No application-side Android Manifest edit, custom Gradle template, permission, or
+  Player Settings change is required.
+- Google Play dependencies automatically merge their required non-exported internal
+  Activity and metadata into the final Manifest. They do not add an Android
+  permission.
+- Only one Review API request runs at a time. A concurrent request is ignored with a
+  diagnostic log.
+- Use a Play Console internal test track or internal app sharing. For an internal
+  test track, install the application from the track with an eligible primary Play
+  account that has not already reviewed it.
+- Internal app sharing is useful for confirming the UI, but review submission is
+  disabled. Quotas and Play Store eligibility can still suppress the dialog.
 
 ## Handle lifetime
 
