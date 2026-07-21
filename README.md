@@ -116,8 +116,14 @@ NP.ShowAlert(
 <summary>Optional: view the Awaitable version</summary>
 
 ```csharp
-private async Awaitable DeleteSaveWithConfirmationAsync()
+private async Awaitable DeleteSaveWithConfirmationAsync(
+    CancellationToken cancellationToken = default)
 {
+    // Link cancellation to this GameObject's lifecycle.
+    using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+        cancellationToken,
+        destroyCancellationToken);
+
     AlertResult result = await NP.ShowAlertAsync(
         new AlertOptions
         {
@@ -126,7 +132,7 @@ private async Awaitable DeleteSaveWithConfirmationAsync()
             YesButtonText = "Delete",
             NoButtonText = "Keep"
         },
-        destroyCancellationToken);
+        linkedCancellation.Token);
 
     if (result == AlertResult.Yes)
     {
@@ -184,8 +190,14 @@ NP.ShowBottomSheet(
 <summary>Optional: view the Awaitable version</summary>
 
 ```csharp
-private async Awaitable ShowPhotoActionsAsync()
+private async Awaitable ShowPhotoActionsAsync(
+    CancellationToken cancellationToken = default)
 {
+    // Link cancellation to this GameObject's lifecycle.
+    using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+        cancellationToken,
+        destroyCancellationToken);
+
     BottomSheetResult result = await NP.ShowBottomSheetAsync(
         new BottomSheetOptions
         {
@@ -205,7 +217,7 @@ private async Awaitable ShowPhotoActionsAsync()
                 }
             }
         },
-        destroyCancellationToken);
+        linkedCancellation.Token);
 
     if (!result.IsCancelled)
     {
@@ -243,15 +255,21 @@ NP.ShowToast(
 <summary>Optional: view the Awaitable version</summary>
 
 ```csharp
-private async Awaitable ShowSavedToastAsync()
+private async Awaitable ShowSavedToastAsync(
+    CancellationToken cancellationToken = default)
 {
+    // Link cancellation to this GameObject's lifecycle.
+    using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+        cancellationToken,
+        destroyCancellationToken);
+
     ToastDismissReason reason = await NP.ShowToastAsync(
         new ToastOptions
         {
             Message = "Saved",
             Position = ToastPosition.Bottom
         },
-        destroyCancellationToken);
+        linkedCancellation.Token);
 
     Debug.Log($"Toast dismissed: {reason}");
 }

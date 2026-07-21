@@ -251,18 +251,27 @@ AlertHandle alert = NP.ShowAlert(
 <summary>Optional: view the Awaitable example</summary>
 
 ```csharp
-AlertResult result = await NP.ShowAlertAsync(
-    new AlertOptions
-    {
-        Title = "Delete save?",
-        Content = "This cannot be undone.",
-        YesButtonText = "Delete",
-        NoButtonText = "Keep",
-        Tag = "delete-confirmation"
-    },
-    destroyCancellationToken);
+private async Awaitable ShowDeleteConfirmationAsync(
+    CancellationToken cancellationToken = default)
+{
+    // Link cancellation to this GameObject's lifecycle.
+    using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+        cancellationToken,
+        destroyCancellationToken);
 
-Debug.Log($"Alert result: {result}");
+    AlertResult result = await NP.ShowAlertAsync(
+        new AlertOptions
+        {
+            Title = "Delete save?",
+            Content = "This cannot be undone.",
+            YesButtonText = "Delete",
+            NoButtonText = "Keep",
+            Tag = "delete-confirmation"
+        },
+        linkedCancellation.Token);
+
+    Debug.Log($"Alert result: {result}");
+}
 ```
 
 </details>
@@ -361,30 +370,39 @@ BottomSheetHandle sheet = NP.ShowBottomSheet(
 <summary>Optional: view the Awaitable example</summary>
 
 ```csharp
-BottomSheetResult result = await NP.ShowBottomSheetAsync(
-    new BottomSheetOptions
-    {
-        Title = "Photo",
-        Content = "Choose an action",
-        Actions = new[]
-        {
-            new BottomSheetAction
-            {
-                Id = "share",
-                Text = "Share"
-            },
-            new BottomSheetAction
-            {
-                Id = "delete",
-                Text = "Delete",
-                Style = BottomSheetActionStyle.Destructive
-            }
-        },
-        CancelButtonText = "Cancel"
-    },
-    destroyCancellationToken);
+private async Awaitable ShowPhotoActionsAsync(
+    CancellationToken cancellationToken = default)
+{
+    // Link cancellation to this GameObject's lifecycle.
+    using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+        cancellationToken,
+        destroyCancellationToken);
 
-Debug.Log(result.IsCancelled ? "Cancelled" : $"Selected: {result.ActionId}");
+    BottomSheetResult result = await NP.ShowBottomSheetAsync(
+        new BottomSheetOptions
+        {
+            Title = "Photo",
+            Content = "Choose an action",
+            Actions = new[]
+            {
+                new BottomSheetAction
+                {
+                    Id = "share",
+                    Text = "Share"
+                },
+                new BottomSheetAction
+                {
+                    Id = "delete",
+                    Text = "Delete",
+                    Style = BottomSheetActionStyle.Destructive
+                }
+            },
+            CancelButtonText = "Cancel"
+        },
+        linkedCancellation.Token);
+
+    Debug.Log(result.IsCancelled ? "Cancelled" : $"Selected: {result.ActionId}");
+}
 ```
 
 </details>
@@ -459,15 +477,24 @@ ToastHandle toast = NP.ShowToast(
 <summary>Optional: view the Awaitable example</summary>
 
 ```csharp
-ToastDismissReason reason = await NP.ShowToastAsync(
-    new ToastOptions
-    {
-        Message = "Saved",
-        Position = ToastPosition.Bottom
-    },
-    destroyCancellationToken);
+private async Awaitable ShowSavedToastAsync(
+    CancellationToken cancellationToken = default)
+{
+    // Link cancellation to this GameObject's lifecycle.
+    using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+        cancellationToken,
+        destroyCancellationToken);
 
-Debug.Log($"Toast dismissed: {reason}");
+    ToastDismissReason reason = await NP.ShowToastAsync(
+        new ToastOptions
+        {
+            Message = "Saved",
+            Position = ToastPosition.Bottom
+        },
+        linkedCancellation.Token);
+
+    Debug.Log($"Toast dismissed: {reason}");
+}
 ```
 
 </details>
