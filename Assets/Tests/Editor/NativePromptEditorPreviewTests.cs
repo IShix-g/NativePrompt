@@ -137,5 +137,34 @@ namespace NativePrompt.Tests
             Assert.That(root.Q<VisualElement>(className: "np-loading-spinner"), Is.Not.Null);
             Assert.That(root.Q<Label>(className: "np-loading-message").text, Is.EqualTo("Working"));
         }
+
+        [Test]
+        public void StoreReview_UsesImageFreeIosStyleAndCanBeDismissed()
+        {
+            _presenter.ShowReview();
+
+            VisualElement root = _presenter.RootForTesting;
+            Assert.That(root.Q<VisualElement>(className: "np-review-card"), Is.Not.Null);
+            Assert.That(root.Q<VisualElement>(className: "np-review-app-icon"), Is.Not.Null);
+            Assert.That(root.Query<Image>().ToList(), Is.Empty);
+            Assert.That(root.Query<Button>(className: "np-review-star").ToList(), Has.Count.EqualTo(5));
+            Assert.That(root.Q<Button>("native-prompt-review-not-now").text, Is.EqualTo("Not Now"));
+            Assert.That(root.Q<Button>("native-prompt-review-submit").text, Is.EqualTo("Submit"));
+
+            _presenter.SelectReviewRating(3);
+            var stars = root.Query<Button>(className: "np-review-star").ToList();
+            Assert.That(stars[0].text, Is.EqualTo("★"));
+            Assert.That(stars[2].text, Is.EqualTo("★"));
+            Assert.That(stars[3].text, Is.EqualTo("☆"));
+            Assert.That(
+                root.Q<Button>("native-prompt-review-not-now").style.display.value,
+                Is.EqualTo(DisplayStyle.None));
+            Assert.That(
+                root.Q<Button>("native-prompt-review-submit").style.display.value,
+                Is.EqualTo(DisplayStyle.Flex));
+
+            _presenter.DismissReview();
+            Assert.That(root.Q<VisualElement>(className: "np-review-card"), Is.Null);
+        }
     }
 }

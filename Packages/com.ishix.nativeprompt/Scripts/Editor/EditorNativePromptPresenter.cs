@@ -24,6 +24,7 @@ namespace NativePrompt.Editor
 
         private readonly Dictionary<string, VisualElement> _bottomSheetViews =
             new Dictionary<string, VisualElement>(StringComparer.Ordinal);
+        private readonly List<Button> _reviewStars = new List<Button>();
         private GameObject _host;
         private PanelSettings _panelSettings;
         private VisualElement _modalLayer;
@@ -31,6 +32,9 @@ namespace NativePrompt.Editor
         private VisualElement _loadingLayer;
         private string _alertRequestId;
         private VisualElement _alertView;
+        private VisualElement _reviewView;
+        private Button _reviewDismissButton;
+        private Button _reviewSubmitButton;
         private string _toastRequestId;
         private string _loadingRequestId;
         private LoadingOptions _loadingOptions;
@@ -345,11 +349,106 @@ namespace NativePrompt.Editor
             _loadingOptions = null;
         }
 
+        internal void ShowReview()
+        {
+            EnsureCreated();
+            DismissReview();
+
+            VisualElement overlay = CreateModalOverlay();
+            VisualElement positioner = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore
+            };
+            positioner.AddToClassList("np-review-positioner");
+
+            VisualElement card = new VisualElement();
+            card.AddToClassList("np-review-card");
+
+            Label monogram = CreateLabel(GetApplicationMonogram(), "np-review-app-monogram");
+            var appIcon = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore
+            };
+            appIcon.AddToClassList("np-review-app-icon");
+            appIcon.Add(monogram);
+            card.Add(appIcon);
+
+            string productName = string.IsNullOrWhiteSpace(Application.productName)
+                ? "this app"
+                : Application.productName;
+            card.Add(CreateLabel($"Enjoying {productName}?", "np-review-title"));
+            card.Add(CreateLabel(
+                "Tap a star to rate it on the App Store.",
+                "np-review-content"));
+
+            var divider = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore
+            };
+            divider.AddToClassList("np-review-divider");
+            card.Add(divider);
+
+            var stars = new VisualElement();
+            stars.AddToClassList("np-review-stars");
+            for (int rating = 1; rating <= 5; rating++)
+            {
+                int selectedRating = rating;
+                var star = new Button
+                {
+                    name = $"native-prompt-review-star-{rating}",
+                    text = "☆",
+                    tooltip = $"{rating} star rating"
+                };
+                star.AddToClassList("np-review-star");
+                star.clicked += () => SelectReviewRating(selectedRating);
+                _reviewStars.Add(star);
+                stars.Add(star);
+            }
+            card.Add(stars);
+
+            _reviewDismissButton = new Button(DismissReview)
+            {
+                name = "native-prompt-review-not-now",
+                text = "Not Now"
+            };
+            _reviewDismissButton.AddToClassList("np-review-action");
+            card.Add(_reviewDismissButton);
+
+            _reviewSubmitButton = new Button(DismissReview)
+            {
+                name = "native-prompt-review-submit",
+                text = "Submit"
+            };
+            _reviewSubmitButton.AddToClassList("np-review-action");
+            _reviewSubmitButton.style.display = DisplayStyle.None;
+            card.Add(_reviewSubmitButton);
+
+            positioner.Add(card);
+            overlay.Add(positioner);
+            _modalLayer.Add(overlay);
+            _modalLayer.style.display = DisplayStyle.Flex;
+            _reviewView = overlay;
+        }
+
+        internal void DismissReview()
+        {
+            _reviewView?.RemoveFromHierarchy();
+            _reviewView = null;
+            _reviewStars.Clear();
+            _reviewDismissButton = null;
+            _reviewSubmitButton = null;
+            UpdateModalLayerDisplay();
+        }
+
         internal void Reset()
         {
             _bottomSheetViews.Clear();
             _alertRequestId = null;
             _alertView = null;
+            _reviewView = null;
+            _reviewStars.Clear();
+            _reviewDismissButton = null;
+            _reviewSubmitButton = null;
             _toastRequestId = null;
             _loadingRequestId = null;
             _loadingOptions = null;
@@ -420,6 +519,25 @@ namespace NativePrompt.Editor
 
             DismissBottomSheet(requestId);
             cancelled(requestId);
+        }
+
+        internal void SelectReviewRating(int rating)
+        {
+            if (_reviewView == null)
+            {
+                return;
+            }
+
+            for (int index = 0; index < _reviewStars.Count; index++)
+            {
+                bool selected = index < rating;
+                Button star = _reviewStars[index];
+                star.text = selected ? "★" : "☆";
+                star.EnableInClassList("np-review-star--selected", selected);
+            }
+
+            _reviewDismissButton.style.display = DisplayStyle.None;
+            _reviewSubmitButton.style.display = DisplayStyle.Flex;
         }
 
         private VisualElement CreateLoadingContent(LoadingOptions options)
@@ -541,6 +659,23 @@ namespace NativePrompt.Editor
             return label;
         }
 
+        private static string GetApplicationMonogram()
+        {
+            string productName = Application.productName;
+            if (!string.IsNullOrEmpty(productName))
+            {
+                foreach (char character in productName)
+                {
+                    if (char.IsLetterOrDigit(character))
+                    {
+                        return char.ToUpperInvariant(character).ToString();
+                    }
+                }
+            }
+
+            return "A";
+        }
+
         private void EnsureCreated()
         {
             if (_host != null)
@@ -611,7 +746,9 @@ namespace NativePrompt.Editor
                 return;
             }
 
-            _modalLayer.style.display = _alertView == null && _bottomSheetViews.Count == 0
+            _modalLayer.style.display = _alertView == null &&
+                _reviewView == null &&
+                _bottomSheetViews.Count == 0
                 ? DisplayStyle.None
                 : DisplayStyle.Flex;
         }

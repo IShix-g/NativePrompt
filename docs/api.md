@@ -811,7 +811,7 @@ the Unity main thread.
 | Bottom sheet | UIKit action sheet | SDK `Dialog` and standard views | iOS-inspired Game view action sheet |
 | Toast | UIKit view overlay | Standard-view overlay | iOS-inspired Game view banner |
 | Loading | Existing-window `UIView`, `UIActivityIndicatorView`, optional `UILabel` | Existing-activity `FrameLayout`, indeterminate `ProgressBar`, optional `TextView` | Game view overlay with position, size, delay, and blocking behavior |
-| Store Review | `Device.RequestStoreReview()` | Google Play In-App Review API | No UI; request test log |
+| Store Review | `Device.RequestStoreReview()` | Google Play In-App Review API | Image-free simulated review card; request test log |
 
 Android runtime prompt UI does not require Material Components, Compose, or another
 external UI library. Store Review adds only the Google Play Review SDK dependency

@@ -47,6 +47,8 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
+- Store Review requests in the Unity Editor now show an interactive, image-free,
+  iOS-inspired review card while retaining the request-only API semantics.
 - Loading messages now appear beside corner spinners and below centered spinners,
   with consistent two-line/four-line truncation on iOS and Android.
 - The sample now includes a `Now Loading...` message preset and keeps its combined

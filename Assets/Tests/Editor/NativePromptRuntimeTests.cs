@@ -569,13 +569,14 @@ namespace NativePrompt.Tests
         }
 
         [Test]
-        public void EditorRequestReview_LogsWithoutLeavingPendingWork()
+        public void EditorRequestReview_ShowsSimulatedPreviewWithoutLeavingPendingWork()
         {
             NativePromptRuntime.SetForTesting(new EditorNativePromptStrategy(), _dispatcher);
             LogAssert.Expect(
                 LogType.Log,
                 "NativePrompt Store Review: request accepted in the Unity Editor; " +
-                "no store review UI is shown.");
+                "showing a simulated preview. Platform display and submission are not " +
+                "guaranteed.");
 
             NP.RequestReview();
 

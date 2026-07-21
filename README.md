@@ -80,10 +80,11 @@ For common application flows, see [Recipes](docs/recipes.md).
 
 ## Unity Editor Preview
 
-Alert, Bottom Sheet, Toast, and Loading have interactive, iOS-inspired previews in
-the Game view while running in the Unity Editor. Store Review accepts the request
-and writes a test log without showing store UI. Preview assets are Editor-only and
-loaded through `AssetDatabase`, so they are not included in player builds.
+Alert, Bottom Sheet, Toast, Loading, and Store Review have interactive, iOS-inspired
+previews in the Game view while running in the Unity Editor. Store Review uses an
+image-free simulation and writes a test log; it does not report whether the platform
+would display or accept a review. Preview assets are Editor-only and loaded through
+`AssetDatabase`, so they are not included in player builds.
 
 ## [Native Alert](docs/api.md#native-alert)
 

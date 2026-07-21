@@ -112,9 +112,11 @@ namespace NativePrompt.Editor
 
         public void RequestReview()
         {
+            _presenter.ShowReview();
             Debug.Log(
                 "NativePrompt Store Review: request accepted in the Unity Editor; " +
-                "no store review UI is shown.");
+                "showing a simulated preview. Platform display and submission are not " +
+                "guaranteed.");
         }
 
         public void Reset()

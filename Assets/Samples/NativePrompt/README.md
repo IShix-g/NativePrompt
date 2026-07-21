@@ -20,6 +20,7 @@ sample controls inaccessible. The manual toast remains visible until `Dismiss
 manual` is selected. `Request review (test)` calls `NP.RequestReview()` and reports
 only that the request was made; it does not claim that store UI appeared. In the
 Editor, prompt APIs use an iOS-inspired Game view preview with white surfaces and a
-dark pill-shaped Toast, while Store Review writes a test log without showing store
-UI. Final native appearance is verified on a device; the PlayMode tests cover scene
-loading, UI wiring, viewport ratio, and result updates.
+dark pill-shaped Toast. Store Review shows an image-free simulated review card and
+writes a test log without claiming that platform UI appeared. Final native appearance
+is verified on a device; the PlayMode tests cover scene loading, UI wiring, viewport
+ratio, and result updates.

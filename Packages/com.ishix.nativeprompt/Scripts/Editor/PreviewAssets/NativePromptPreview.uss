@@ -102,6 +102,117 @@
     background-color: rgb(229, 231, 235);
 }
 
+.np-review-positioner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.np-review-card {
+    width: 340px;
+    max-width: 92%;
+    padding: 22px 24px 16px 24px;
+    border-width: 0;
+    border-radius: 26px;
+    background-color: rgba(248, 250, 252, 0.98);
+    color: rgb(17, 24, 39);
+}
+
+.np-review-app-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgb(203, 213, 225);
+    border-radius: 15px;
+    background-color: rgb(255, 255, 255);
+}
+
+.np-review-app-monogram {
+    font-size: 30px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(0, 122, 255);
+}
+
+.np-review-title {
+    font-size: 20px;
+    -unity-font-style: bold;
+    white-space: normal;
+    color: rgb(17, 24, 39);
+}
+
+.np-review-content {
+    margin-top: 8px;
+    font-size: 16px;
+    white-space: normal;
+    color: rgb(75, 85, 99);
+}
+
+.np-review-divider {
+    height: 1px;
+    margin-top: 22px;
+    background-color: rgba(148, 163, 184, 0.48);
+}
+
+.np-review-stars {
+    height: 86px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.np-review-star {
+    width: 52px;
+    height: 60px;
+    flex-shrink: 1;
+    margin: 0;
+    padding: 0;
+    border-width: 0;
+    background-color: rgba(255, 255, 255, 0);
+    color: rgb(31, 178, 255);
+    font-size: 39px;
+    -unity-font-style: normal;
+    -unity-text-align: middle-center;
+}
+
+.np-review-star:hover {
+    background-color: rgba(0, 122, 255, 0.08);
+}
+
+.np-review-star:active,
+.np-review-star--selected {
+    color: rgb(43, 190, 255);
+}
+
+.np-review-action {
+    height: 52px;
+    margin: 0;
+    padding: 0 16px;
+    border-width: 0;
+    border-radius: 26px;
+    background-color: rgba(118, 118, 128, 0.12);
+    color: rgb(0, 122, 255);
+    font-size: 18px;
+    -unity-font-style: normal;
+    -unity-text-align: middle-center;
+}
+
+.np-review-action:hover {
+    background-color: rgba(118, 118, 128, 0.18);
+}
+
+.np-review-action:active {
+    background-color: rgba(118, 118, 128, 0.24);
+}
+
 .np-sheet-positioner {
     align-items: center;
     justify-content: flex-end;
