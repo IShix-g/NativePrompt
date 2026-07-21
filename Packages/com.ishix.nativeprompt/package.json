@@ -1,6 +1,6 @@
 {
   "name": "com.ishix.nativeprompt",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "displayName": "Native Prompt",
   "description": "Provides platform-native alerts, bottom sheets, toasts, and loading overlays for Unity.",
   "unity": "6000.0",
