@@ -645,6 +645,15 @@ only for Editor and device verification.
 | Production display quota (July 2026) | Up to 3 times in 365 days | Time-bound; exact limit not published |
 | Display guarantee | No | No |
 
+### Localization
+
+The platform automatically translates the standard review text and controls for
+each supported language. Native Prompt does not supply or translate these strings.
+
+The application name is not translated automatically. The platform displays the
+configured application name as-is, so configure localized application names
+separately in the platform project or store settings when needed.
+
 ### Display quotas
 
 The following limits reflect the platform documentation available in July 2026.
@@ -672,10 +681,8 @@ can track its own last-requested version or date to avoid unnecessary calls.
 - StoreKit controls display frequency and may suppress the dialog.
 - The request has no effect in an application distributed through TestFlight. Use a
   Development Build when confirming the UI.
-- The system automatically localizes the standard text and controls for the device
-  language. Applications cannot customize that wording.
-- The displayed application name comes from the bundle display name. Localize
-  `CFBundleDisplayName` only when the name itself must vary by language.
+- The displayed application name comes from the bundle display name. Configure
+  localized `CFBundleDisplayName` values when the name itself must vary by language.
 
 ### Android
 
