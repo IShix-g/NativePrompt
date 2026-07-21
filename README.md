@@ -347,7 +347,10 @@ localization, and device testing.
 
 ## [Handles](docs/api.md#handle-lifetime)
 
-Every `Show*()` method returns a handle for that request.
+`ShowAlert()`, `ShowBottomSheet()`, `ShowToast()`, and `ShowLoading()` each return a
+handle for that request. The optional `Show*Async()` variants for Alert, Bottom
+Sheet, and Toast return a Unity `Awaitable<T>` instead; control their lifetime with
+a `CancellationToken`.
 
 - Call `Dismiss()` to close it and deliver the normal dismissal result.
 - Call `Dispose()` to remove Alert, Bottom Sheet, or Toast without a result
