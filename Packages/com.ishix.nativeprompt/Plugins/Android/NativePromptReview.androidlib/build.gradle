@@ -7,4 +7,9 @@ dependencies {
 android {
     namespace 'com.ishix.nativeprompt.review'
     compileSdk getProperty("unity.compileSdkVersion") as int
+
+    defaultConfig {
+        minSdk 24
+        targetSdk getProperty("unity.targetSdkVersion") as int
+    }
 }
