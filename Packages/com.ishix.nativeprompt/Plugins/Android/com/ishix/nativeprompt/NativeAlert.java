@@ -2,6 +2,7 @@ package com.ishix.nativeprompt;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.res.Configuration;
 
 import com.unity3d.player.UnityPlayer;
 
@@ -87,7 +88,12 @@ public final class NativeAlert {
             String closeButtonText,
             Callback callback) {
         try {
-            AlertDialog.Builder builder = new AlertDialog.Builder(activity)
+            int mode = activity.getResources().getConfiguration().uiMode;
+            boolean dark = (mode & Configuration.UI_MODE_NIGHT_MASK)
+                    == Configuration.UI_MODE_NIGHT_YES;
+            int theme = dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
+                    : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert;
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity, theme)
                     .setMessage(content)
                     .setCancelable(false);
             if (title != null) {
