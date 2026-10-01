@@ -2,9 +2,12 @@ package com.ishix.nativeprompt;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -113,9 +116,10 @@ public final class NativeBottomSheet {
 
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             window.setLayout(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    Math.min(activity.getResources().getDisplayMetrics().widthPixels,
+                            dp(activity, 536)),
                     ViewGroup.LayoutParams.WRAP_CONTENT);
-            window.setGravity(Gravity.BOTTOM);
+            window.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
             window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
             WindowManager.LayoutParams attributes = window.getAttributes();
             attributes.dimAmount = 0.32f;
@@ -141,39 +145,41 @@ public final class NativeBottomSheet {
             JSONObject payload) throws Exception {
         LinearLayout content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
-        int horizontalPadding = dp(activity, 20);
-        int verticalPadding = dp(activity, 12);
-        content.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+        int padding = dp(activity, 8);
+        content.setPadding(padding, padding, padding, padding);
 
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(resolveColor(activity, android.R.attr.colorBackground, Color.WHITE));
-        background.setCornerRadius(dp(activity, 16));
-        content.setBackground(background);
+        boolean dark = isDarkMode(activity);
+        int surface = dark ? Color.rgb(44, 44, 46) : Color.rgb(242, 242, 247);
+        int secondaryText = dark ? Color.rgb(174, 174, 178) : Color.rgb(99, 99, 102);
+
+        LinearLayout group = new LinearLayout(activity);
+        group.setOrientation(LinearLayout.VERTICAL);
+        group.setBackground(roundedBackground(activity, surface));
+        group.setClipToOutline(true);
+        content.addView(group, matchWrap());
 
         String title = optionalString(payload, "title");
+        String body = optionalString(payload, "content");
         if (title != null) {
             TextView titleView = new TextView(activity);
             titleView.setText(title);
-            titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f);
-            titleView.setTextColor(resolveColor(
-                    activity,
-                    android.R.attr.textColorPrimary,
-                    Color.BLACK));
-            titleView.setPadding(0, dp(activity, 6), 0, dp(activity, 4));
-            content.addView(titleView, matchWrap());
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+            titleView.setTextColor(secondaryText);
+            titleView.setGravity(Gravity.CENTER);
+            titleView.setPadding(dp(activity, 16), dp(activity, 16),
+                    dp(activity, 16), body == null ? dp(activity, 16) : dp(activity, 4));
+            group.addView(titleView, matchWrap());
         }
 
-        String body = optionalString(payload, "content");
         if (body != null) {
             TextView bodyView = new TextView(activity);
             bodyView.setText(body);
             bodyView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
-            bodyView.setTextColor(resolveColor(
-                    activity,
-                    android.R.attr.textColorSecondary,
-                    Color.DKGRAY));
-            bodyView.setPadding(0, dp(activity, 2), 0, dp(activity, 8));
-            content.addView(bodyView, matchWrap());
+            bodyView.setTextColor(secondaryText);
+            bodyView.setGravity(Gravity.CENTER);
+            bodyView.setPadding(dp(activity, 16), title == null ? dp(activity, 16) : 0,
+                    dp(activity, 16), dp(activity, 16));
+            group.addView(bodyView, matchWrap());
         }
 
         return content;
@@ -184,33 +190,76 @@ public final class NativeBottomSheet {
             JSONObject payload,
             State state) throws Exception {
         Activity activity = (Activity) content.getContext();
+        LinearLayout group = (LinearLayout) content.getChildAt(0);
+        boolean dark = isDarkMode(activity);
+        int tint = dark ? Color.rgb(10, 132, 255) : Color.rgb(0, 122, 255);
+        int destructive = dark ? Color.rgb(255, 69, 58) : Color.rgb(255, 59, 48);
+        int disabled = dark ? Color.rgb(99, 99, 102) : Color.rgb(174, 174, 178);
+        int pressed = dark ? Color.rgb(72, 72, 74) : Color.rgb(209, 209, 214);
+        int separator = dark ? Color.rgb(84, 84, 88) : Color.rgb(198, 198, 200);
         JSONArray actions = payload.getJSONArray("actions");
         for (int index = 0; index < actions.length(); index++) {
             JSONObject action = actions.getJSONObject(index);
             String actionId = action.getString("id");
-            Button button = createButton(activity, action.getString("text"));
-            button.setEnabled(action.getBoolean("enabled"));
-            if (action.getInt("style") == 1) {
-                button.setTextColor(Color.rgb(176, 0, 32));
+            if (group.getChildCount() > 0) {
+                addSeparator(activity, group, separator);
             }
+            Button button = createAction(activity, action.getString("text"), pressed);
+            button.setEnabled(action.getBoolean("enabled"));
+            button.setTextColor(!button.isEnabled() ? disabled
+                    : action.getInt("style") == 1 ? destructive : tint);
             button.setOnClickListener(ignored -> state.completeAction(actionId));
-            content.addView(button, matchWrap());
+            group.addView(button, matchWrap());
         }
 
-        Button cancelButton = createButton(activity, payload.getString("cancelButtonText"));
+        Button cancelButton = createAction(
+                activity, payload.getString("cancelButtonText"), pressed);
+        cancelButton.setTextColor(tint);
+        cancelButton.setBackground(roundedBackground(
+                activity, dark ? Color.rgb(44, 44, 46) : Color.rgb(242, 242, 247)));
+        cancelButton.setClipToOutline(true);
         LinearLayout.LayoutParams cancelLayout = matchWrap();
-        cancelLayout.topMargin = dp(activity, 4);
+        cancelLayout.topMargin = dp(activity, 8);
         cancelButton.setOnClickListener(ignored -> state.completeCancelled());
         content.addView(cancelButton, cancelLayout);
     }
 
-    private static Button createButton(Activity activity, String text) {
+    private static Button createAction(Activity activity, String text, int pressed) {
         Button button = new Button(activity);
         button.setText(text);
         button.setAllCaps(false);
-        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        button.setMinHeight(dp(activity, 48));
+        button.setTypeface(Typeface.DEFAULT);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f);
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(dp(activity, 58));
+        button.setMinWidth(0);
+        button.setPadding(dp(activity, 16), dp(activity, 10),
+                dp(activity, 16), dp(activity, 10));
+        button.setBackground(new ColorDrawable(Color.TRANSPARENT));
+        button.setBackgroundTintList(null);
+        button.setStateListAnimator(null);
+        button.setForeground(new RippleDrawable(
+                android.content.res.ColorStateList.valueOf(pressed), null, null));
         return button;
+    }
+
+    private static void addSeparator(Activity activity, LinearLayout group, int color) {
+        View separator = new View(activity);
+        separator.setBackgroundColor(color);
+        group.addView(separator, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(activity, 1)));
+    }
+
+    private static GradientDrawable roundedBackground(Activity activity, int color) {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(color);
+        background.setCornerRadius(dp(activity, 14));
+        return background;
+    }
+
+    private static boolean isDarkMode(Activity activity) {
+        int mode = activity.getResources().getConfiguration().uiMode;
+        return (mode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
     }
 
     private static void applyBottomInsets(View content) {
@@ -237,17 +286,6 @@ public final class NativeBottomSheet {
         }
         String value = payload.optString(key, null);
         return value == null || value.isEmpty() ? null : value;
-    }
-
-    private static int resolveColor(Activity activity, int attributeId, int fallback) {
-        TypedValue value = new TypedValue();
-        if (!activity.getTheme().resolveAttribute(attributeId, value, true)) {
-            return fallback;
-        }
-        if (value.resourceId != 0) {
-            return activity.getColor(value.resourceId);
-        }
-        return value.data;
     }
 
     private static int dp(Activity activity, int value) {

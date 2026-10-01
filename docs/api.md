@@ -317,6 +317,10 @@ BottomSheetHandle ShowBottomSheet(
 Shows an action sheet with one to three actions. Each action needs a unique ID and
 display text.
 
+On iOS, the system action sheet follows the app's interface style. On Android,
+NativePrompt uses an iOS-inspired action sheet and chooses its light or dark colors
+from the device's current night mode when the sheet opens.
+
 The optional Awaitable form has the following signature:
 
 ```csharp
